@@ -1,6 +1,6 @@
 # Keep WordPress core files required to run the site.
-# The local wp-config.php is intentionally environment-specific and should stay out of Git.
-# The core installation still remains tracked except for the local config file.
+# Keep the local backend config in the working tree for development, but do not track it.
+# Local environment files stay ignored.
 
 # Local environment files
 .env
