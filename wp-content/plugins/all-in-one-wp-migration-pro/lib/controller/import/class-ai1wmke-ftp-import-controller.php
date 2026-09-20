@@ -1,0 +1,169 @@
+<?php
+/**
+ * Copyright (C) 2014-2025 ServMask Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Attribution: This code is part of the All-in-One WP Migration plugin, developed by
+ *
+ * ███████╗███████╗██████╗ ██╗   ██╗███╗   ███╗ █████╗ ███████╗██╗  ██╗
+ * ██╔════╝██╔════╝██╔══██╗██║   ██║████╗ ████║██╔══██╗██╔════╝██║ ██╔╝
+ * ███████╗█████╗  ██████╔╝██║   ██║██╔████╔██║███████║███████╗█████╔╝
+ * ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██║╚██╔╝██║██╔══██║╚════██║██╔═██╗
+ * ███████║███████╗██║  ██║ ╚████╔╝ ██║ ╚═╝ ██║██║  ██║███████║██║  ██╗
+ * ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	die( 'Kangaroos cannot jump here' );
+}
+
+class Ai1wmke_FTP_Import_Controller {
+
+	public static function button() {
+		return Ai1wm_Template::get_content(
+			'import/button/button-ftp',
+			array(
+				'type'       => get_option( 'ai1wmke_ftp_type', AI1WMKE_FTP_TYPE ),
+				'connection' => get_option( 'ai1wmke_ftp_connection', false ),
+			),
+			AI1WMKE_TEMPLATES_PATH
+		);
+	}
+
+	public static function picker() {
+		Ai1wm_Template::render(
+			'import/picker/picker-ftp',
+			array(
+				'type'       => get_option( 'ai1wmke_ftp_type', AI1WMKE_FTP_TYPE ),
+				'connection' => get_option( 'ai1wmke_ftp_connection', false ),
+			),
+			AI1WMKE_TEMPLATES_PATH
+		);
+	}
+
+	public static function browser( $params = array() ) {
+		ai1wm_setup_environment();
+
+		// Set params
+		if ( empty( $params ) ) {
+			$params = stripslashes_deep( $_GET );
+		}
+
+		// Set folder path
+		$folder_path = null;
+		if ( isset( $params['folder_path'] ) ) {
+			$folder_path = trim( $params['folder_path'] );
+		}
+
+		// Set FTP client
+		$ftp = Ai1wmke_FTP_Factory::create(
+			get_option( 'ai1wmke_ftp_type', AI1WMKE_FTP_TYPE ),
+			get_option( 'ai1wmke_ftp_hostname', false ),
+			get_option( 'ai1wmke_ftp_username', false ),
+			get_option( 'ai1wmke_ftp_password', false ),
+			get_option( 'ai1wmke_ftp_authentication', AI1WMKE_FTP_AUTHENTICATION ),
+			get_option( 'ai1wmke_ftp_key', false ),
+			get_option( 'ai1wmke_ftp_passphrase', false ),
+			get_option( 'ai1wmke_ftp_directory', false ),
+			get_option( 'ai1wmke_ftp_port', AI1WMKE_FTP_PORT ),
+			get_option( 'ai1wmke_ftp_active', false )
+		);
+
+		// Get files and directories
+		$items = $ftp->list_folder( $folder_path );
+
+		// Set folder structure
+		$response = array( 'items' => array(), 'num_hidden_files' => 0 );
+
+		// Set folder items
+		foreach ( $items as $item ) {
+			if ( $item['type'] === 'folder' || pathinfo( $item['name'], PATHINFO_EXTENSION ) === 'wpress' ) {
+				$response['items'][] = array(
+					'index' => null,
+					'name'  => isset( $item['name'] ) ? $item['name'] : null,
+					'path'  => isset( $item['path'] ) ? $item['path'] : null,
+					'unix'  => isset( $item['date'] ) ? $item['date'] : null,
+					'date'  => isset( $item['date'] ) ? human_time_diff( $item['date'] ) : null,
+					'size'  => isset( $item['bytes'] ) ? ai1wm_size_format( $item['bytes'] ) : null,
+					'bytes' => isset( $item['bytes'] ) ? $item['bytes'] : null,
+					'type'  => isset( $item['type'] ) ? $item['type'] : null,
+				);
+			} else {
+				$response['num_hidden_files']++;
+			}
+		}
+
+		// Sort items by type desc and date desc
+		Ai1wmke_File_Sorter::sort( $response['items'], Ai1wmke_File_Sorter::by_type_desc_date_desc( 'unix' ) );
+
+		echo json_encode( $response );
+		exit;
+	}
+
+	public static function incremental( $params = array() ) {
+		ai1wm_setup_environment();
+
+		// Set params
+		if ( empty( $params ) ) {
+			$params = stripslashes_deep( $_GET );
+		}
+
+		// Set folder path
+		$folder_path = null;
+		if ( isset( $params['folder_path'] ) ) {
+			$folder_path = trim( $params['folder_path'] );
+		}
+
+		// Set FTP client
+		$ftp = Ai1wmke_FTP_Factory::create(
+			get_option( 'ai1wmke_ftp_type', AI1WMKE_FTP_TYPE ),
+			get_option( 'ai1wmke_ftp_hostname', false ),
+			get_option( 'ai1wmke_ftp_username', false ),
+			get_option( 'ai1wmke_ftp_password', false ),
+			get_option( 'ai1wmke_ftp_authentication', AI1WMKE_FTP_AUTHENTICATION ),
+			get_option( 'ai1wmke_ftp_key', false ),
+			get_option( 'ai1wmke_ftp_passphrase', false ),
+			get_option( 'ai1wmke_ftp_directory', false ),
+			get_option( 'ai1wmke_ftp_port', AI1WMKE_FTP_PORT ),
+			get_option( 'ai1wmke_ftp_active', false )
+		);
+
+		try {
+			$file_content = $ftp->get_file_content( sprintf( '%s/incremental.backups.list', $folder_path ) );
+		} catch ( Ai1wmke_Error_Exception $e ) {
+		}
+
+		$items = array();
+		if ( isset( $file_content ) ) {
+			foreach ( str_getcsv( $file_content, "\n" ) as $row ) {
+				if ( list( $file_index, $file_path, $file_size, $file_mtime ) = str_getcsv( $row ) ) {
+					$items[] = array(
+						'index' => $file_index,
+						'name'  => sprintf( __( 'Restore point %d', AI1WMKE_PLUGIN_NAME ), $file_index ),
+						'path'  => sprintf( '%s/%s', $folder_path, $file_path ),
+						'unix'  => $file_mtime,
+						'date'  => get_date_from_gmt( date( 'Y-m-d H:i:s', $file_mtime ), 'M j, Y g:i a' ),
+						'size'  => ai1wm_size_format( $file_size ),
+						'bytes' => $file_size,
+						'type'  => 'application/octet-stream',
+					);
+				}
+			}
+		}
+
+		echo json_encode( array( 'items' => array_reverse( $items ), 'cursor' => null ) );
+		exit;
+	}
+}

@@ -1,0 +1,21 @@
+= 1.41 =
+* Fixed the WP-CLI reset command failing with an undefined method error
+
+= 1.40 =
+* Added `--exclude-files` option to the WP-CLI backup command
+* Updated the bundled phpseclib library to patch a security vulnerability (CVE-2026-55599)
+
+= 1.39 =
+* Update the bundled phpseclib library to patch security vulnerabilities (CVE-2026-44167, CVE-2026-40194)
+* Fixed stored XSS vulnerability in the backups path setting
+* Improved PHP 8.5 compatibility
+
+= 1.38 =
+* Fixed Mega login issue caused by hashcash challenge returning 402 Payment Required
+* Added permission checks for `admin_post` actions to improve security
+* Fixed broken User Guide links in the admin interface
+* Improved PHP 8 compatibility in the export/import pipeline
+* Improved compatibility with other plugins by isolating vendor dependencies
+
+= 1.37 =
+* Improved performance when closing archives during export

@@ -1,0 +1,42 @@
+/*
+Theme Name: Jacqueline Child Theme
+Theme URI: https://jacqueline.themerex.net/
+Description: Jacqueline is a Premium WordPress theme that has built-in support for popular Page Builders, slider with swipe gestures, and is SEO- and Retina-ready. The unique system of inheritance and override options allows setting up individual parameters for different sections of your site and supported plugins.
+Author: ThemeREX
+Author URI: https://themerex.net/
+Version: 2.24.0
+Tested up to: 6.9
+Requires at least: 5.0
+Requires PHP: 7.0
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Tags: blog, e-commerce, portfolio, grid-layout, one-column, two-columns, three-columns, four-columns, left-sidebar, right-sidebar, custom-background, custom-colors, custom-header, custom-logo, custom-menu, editor-style, featured-image-header, featured-images, flexible-header, footer-widgets, full-width-template, microformats, post-formats, sticky-post, theme-options, threaded-comments, translation-ready, block-styles, wide-blocks
+Text Domain: jacqueline
+Template: jacqueline
+*/
+
+
+/* =Child-Theme customization starts here
+------------------------------------------------------------ */
+
+body.body_style_fullwide {
+	--theme-var-page: 100%;
+	--theme-var-page_fullwide_extra: 0px;
+	overflow-x: clip;
+}
+
+body.body_style_fullwide .page_wrap,
+body.body_style_fullwide .content_wrap {
+	width: 100%;
+	max-width: none;
+	margin-right: 0;
+	margin-left: 0;
+	padding-right: 0;
+	padding-left: 0;
+	box-sizing: border-box;
+}
+
+body.body_style_fullwide .top_panel .content_wrap {
+	padding-right: clamp(35px, 3.75vw, 60px);
+	padding-left: clamp(35px, 3.75vw, 60px);
+}

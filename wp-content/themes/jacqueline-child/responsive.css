@@ -1,0 +1,17 @@
+/* =Child-Theme responsive styles starts here
+-------------------------------------------------------------- */
+
+body.body_style_fullwide {
+	--theme-var-page: 100%;
+	--theme-var-page_fullwide_extra: 0px;
+}
+
+body.body_style_fullwide .page_wrap,
+body.body_style_fullwide .content_wrap {
+	width: 100%;
+	max-width: none;
+	margin-right: 0;
+	margin-left: 0;
+	padding-right: 0;
+	padding-left: 0;
+}

@@ -1,0 +1,18 @@
+
+.copy-tooltip[data-v-9c3b840a] {
+  position: absolute;
+  bottom: -30px;
+  right: 50%;
+  transform: translateX(50%);
+  background: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 1000;
+}
+button[data-v-9c3b840a] {
+  position: relative;
+}
+

@@ -1,0 +1,93 @@
+.lp-processor-logo-woocommerce {
+  background-image: url(/wp-content/plugins/latepoint-payments-woocommerce/public/images/processor-logo.png);
+  background-size: contain;
+  color: transparent;
+  background-position: center center;
+  background-repeat: no-repeat;
+  width: 30px;
+  overflow: hidden;
+}
+
+.os-woocommerce-order-link-wrapper {
+  display: flex;
+  justify-content: flex-end;
+}
+.os-woocommerce-order-link-wrapper .os-woocommerce-order-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--latepoint-brand-primary);
+  gap: 5px;
+}
+.os-woocommerce-order-link-wrapper .os-woocommerce-order-link span {
+  border-bottom: 1px dotted var(--latepoint-brand-primary);
+}
+
+.generic-product-info {
+  background-color: #f8f8f8;
+  border-radius: 6px;
+  padding: 15px;
+  margin-top: 10px;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+.generic-product-info .gp-not-found {
+  background-color: #eee;
+  color: #888;
+  padding: 5px 8px;
+  border-radius: 4px;
+}
+.generic-product-info .gp-generate-link {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+}
+.generic-product-info .gp-generate-link span {
+  border-bottom: 1px dotted var(--latepoint-brand-primary);
+}
+.generic-product-info .gp-generate-link.os-loading:before {
+  display: block;
+  content: "";
+  width: 12px !important;
+  height: 12px !important;
+  border-bottom: 2px solid var(--latepoint-brand-primary);
+  border-left: 2px solid var(--latepoint-brand-primary);
+  border-top: 2px solid var(--latepoint-brand-primary);
+  border-right: 2px solid rgba(255, 255, 255, 0);
+  border-radius: 20px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: os-loading 700ms infinite linear;
+  background-color: transparent !important;
+  left: 6px;
+}
+.generic-product-info .gp-generate-link.os-loading i {
+  color: transparent;
+}
+.generic-product-info .gp-existing-product-link {
+  padding: 3px 5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #fff;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+  color: #14161d;
+  text-decoration: none;
+  border-radius: 4px;
+}
+.generic-product-info .gp-existing-product-link:hover {
+  box-shadow: 0 0 0 2px var(--latepoint-brand-primary);
+}
+.generic-product-info .gp-existing-product-link .latepoint-icon-check {
+  color: #61ae00;
+  font-size: 18px;
+}
+.generic-product-info .gp-existing-product-link .latepoint-icon-external-link {
+  color: var(--latepoint-brand-primary);
+  font-size: 12px;
+}

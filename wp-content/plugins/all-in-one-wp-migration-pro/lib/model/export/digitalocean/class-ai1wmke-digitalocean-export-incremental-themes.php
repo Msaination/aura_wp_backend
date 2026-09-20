@@ -1,0 +1,160 @@
+<?php
+/**
+ * Copyright (C) 2014-2025 ServMask Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Attribution: This code is part of the All-in-One WP Migration plugin, developed by
+ *
+ * ███████╗███████╗██████╗ ██╗   ██╗███╗   ███╗ █████╗ ███████╗██╗  ██╗
+ * ██╔════╝██╔════╝██╔══██╗██║   ██║████╗ ████║██╔══██╗██╔════╝██║ ██╔╝
+ * ███████╗█████╗  ██████╔╝██║   ██║██╔████╔██║███████║███████╗█████╔╝
+ * ╚════██║██╔══╝  ██╔══██╗╚██╗ ██╔╝██║╚██╔╝██║██╔══██║╚════██║██╔═██╗
+ * ███████║███████╗██║  ██║ ╚████╔╝ ██║ ╚═╝ ██║██║  ██║███████║██║  ██╗
+ * ╚══════╝╚══════╝╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	die( 'Kangaroos cannot jump here' );
+}
+
+class Ai1wmke_DigitalOcean_Export_Incremental_Themes {
+
+	public static function execute( $params, $digitalocean = null ) {
+
+		// Get bucket name
+		if ( ! isset( $params['bucket_name'] ) ) {
+			$params['bucket_name'] = get_option( 'ai1wmke_digitalocean_bucket_name', ai1wm_archive_bucket() );
+		}
+
+		// Get region name
+		if ( ! isset( $params['region_name'] ) ) {
+			$params['region_name'] = get_option( 'ai1wmke_digitalocean_region_name', ai1wmke_aws_region_name( AI1WMKE_DIGITALOCEAN_REGION_NAME ) );
+		}
+
+		// Get folder name
+		if ( ! isset( $params['folder_name'] ) ) {
+			$params['folder_name'] = get_option( 'ai1wmke_digitalocean_folder_name', '' );
+		}
+
+		// Set progress
+		Ai1wm_Status::info( __( 'Preparing incremental theme files...', AI1WMKE_PLUGIN_NAME ) );
+
+		// Set DigitalOcean Spaces client
+		if ( is_null( $digitalocean ) ) {
+			$digitalocean = new Ai1wmke_DigitalOcean_Client(
+				get_option( 'ai1wmke_digitalocean_access_key', ai1wmke_aws_access_key() ),
+				get_option( 'ai1wmke_digitalocean_secret_key', ai1wmke_aws_secret_key() )
+			);
+		}
+
+		// Get region name
+		$params['region_name'] = $digitalocean->get_bucket_region( $params['bucket_name'], $params['region_name'] );
+
+		// Download incremental files
+		if ( ( $incremental_list = ai1wm_open( ai1wm_incremental_themes_list_path( $params ), 'wb' ) ) ) {
+			try {
+				$digitalocean->get_file( $incremental_list, sprintf( '/%s/incremental-backups/incremental.themes.list', $params['folder_name'] ), $params['bucket_name'], $params['region_name'] );
+			} catch ( Ai1wmke_Error_Exception $e ) {
+			}
+
+			ai1wm_close( $incremental_list );
+		}
+
+		$incremental_files = array();
+
+		// Get incremental files
+		if ( ( $incremental_list = ai1wm_open( ai1wm_incremental_themes_list_path( $params ), 'rb' ) ) ) {
+			while ( ( $row = ai1wm_getcsv( $incremental_list ) ) !== false ) {
+				list( $file_abspath, $file_relpath, $file_size, $file_mtime ) = $row;
+				$incremental_files[ $file_abspath ][] = array( $file_relpath, $file_size, $file_mtime ); // phpcs:ignore Generic.Formatting.MultipleStatementAlignment.NotSameWarning
+			}
+
+			ai1wm_close( $incremental_list );
+		}
+
+		$themes_files = array();
+
+		// Get themes files
+		if ( ( $themes_list = ai1wm_open( ai1wm_themes_list_path( $params ), 'rb' ) ) ) {
+			while ( ( $row = ai1wm_getcsv( $themes_list ) ) !== false ) {
+				list( $file_abspath, $file_relpath, $file_size, $file_mtime ) = $row;
+				$themes_files[ $file_abspath ][] = array( $file_relpath, $file_size, $file_mtime ); // phpcs:ignore Generic.Formatting.MultipleStatementAlignment.NotSameWarning
+			}
+
+			ai1wm_close( $themes_list );
+		}
+
+		// Compare incremental files
+		foreach ( $incremental_files as $file_abspath => $file_attributes ) {
+			if ( ! isset( $themes_files[ $file_abspath ] ) ) {
+				unset( $incremental_files[ $file_abspath ] );
+			}
+		}
+
+		// Compare themes files
+		foreach ( $themes_files as $file_abspath => $file_attributes ) {
+			if ( isset( $incremental_files[ $file_abspath ] ) ) {
+				foreach ( $file_attributes as $file_meta ) {
+					if ( in_array( $file_meta, $incremental_files[ $file_abspath ] ) ) {
+						unset( $themes_files[ $file_abspath ] );
+					}
+				}
+			}
+		}
+
+		// Append themes files to incremental files
+		$incremental_files = array_merge_recursive( $incremental_files, $themes_files );
+
+		// Write incremental files
+		if ( ( $incremental_list = ai1wm_open( ai1wm_incremental_themes_list_path( $params ), 'wb' ) ) ) {
+			foreach ( $incremental_files as $file_abspath => $file_attributes ) {
+				foreach ( $file_attributes as $file_meta ) {
+					ai1wm_putcsv( $incremental_list, array( $file_abspath, $file_meta[0], $file_meta[1], $file_meta[2] ) );
+				}
+			}
+
+			ai1wm_close( $incremental_list );
+		}
+
+		$total_themes_files_count = $total_themes_files_size = 1;
+
+		// Write themes files
+		if ( ( $themes_list = ai1wm_open( ai1wm_themes_list_path( $params ), 'wb' ) ) ) {
+			foreach ( $themes_files as $file_abspath => $file_attributes ) {
+				foreach ( $file_attributes as $file_meta ) {
+					if ( ai1wm_putcsv( $themes_list, array( $file_abspath, $file_meta[0], $file_meta[1], $file_meta[2] ) ) !== false ) {
+						$total_themes_files_count++;
+
+						// Add current file size
+						$total_themes_files_size += $file_meta[1];
+					}
+				}
+			}
+
+			ai1wm_close( $themes_list );
+		}
+
+		// Set progress
+		Ai1wm_Status::info( __( 'Done preparing incremental theme files.', AI1WMKE_PLUGIN_NAME ) );
+
+		// Set total themes files count
+		$params['total_themes_files_count'] = $total_themes_files_count;
+
+		// Set total themes files size
+		$params['total_themes_files_size'] = $total_themes_files_size;
+
+		return $params;
+	}
+}

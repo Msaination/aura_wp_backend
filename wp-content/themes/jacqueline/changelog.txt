@@ -1,0 +1,512 @@
+Version: 2.24.0
+    Added:
+        - QW Extension addon (to version 2.0.0)
+        - TrxAddons: added voice input support to the TrxAiAssistant helper chat in the admin panel.
+        - AI Helper: added a microphone button to all shortcode generators, allowing users to dictate prompts for content generation by voice.
+        - AI Helper: added SpeechToText functionality for converting voice to text and populating the associated text field.
+        - Slider Widget: added "slides_min_width" parameter to slider settings for adjusting the minimum width of slides - this determines the maximum number of simultaneously visible slides in responsive mode.
+        - Layouts Login Widget: added a parameter for configuring the list of items in the user menu.
+    Fixed:
+        - Fixed a potential Object Injection vulnerability during unserialize of data from scheme_storage and skin options during skin installation/activation.
+        - PHP 8.5 Compatibility.
+        - Minor CSS fixes (The Events Calendar).
+        - Minor fixes for Icons templates.
+        - TrxAddons: fix in the parallax animation script - a scaled object was jittering on the resize event.
+        - TrxAddons: fix in api/woocommerce to support non-Latin characters in WooCommerce product category and attribute names.
+        - TrxAddons: Elementor Widgets: optimized database queries in "Posts" and "Woo Products" widgets, and fix for autocomplete terms - taxonomy was not taken into account when searching for terms.
+        - Fix in xxx_add_to_url() functions to support arrays in URL parameters.
+        - The image sizes for the “Category List” widget (Style 1)
+    Removed:
+        - Commented code and style fragments removed.
+
+Version: 2.23.0
+	Added:
+		- Cosmetology Homepage
+
+Version: 2.22.0
+	Added:
+		- Laser Dermatology Homepage
+		
+Version: 2.21.0
+    Added:
+        - QW Extension addon (to version 1.6.2)
+        - Accessibility improvements for WP Accessibility Check.
+        - Events list Widget: the Classic layout now includes the event time in addition to the date.
+        - Images Compare Widget: Separate styling for separator/handler; option to hide handler and control tag/offsets for "Before" & "After".
+    Fixed:
+        - Style tweaks for The Events Calendar integrations.
+        - Audio widget: template "default" (select audio from library).
+
+Version: 2.20.0
+    Added:
+        - Plugin Settings – Added links to documentation and descriptions of custom Elementor settings/widgets.
+        - Stack Sections – Added transition duration control for Zoom, Blur, Opacity effects.
+        - Elementor Presets Support – Added ability to save/load custom style presets for widgets, sections, columns, and containers. Stored in /plugins/trx_addons/presets/trx_addons-presets.json.
+        - Skin Notice – Admin notice now includes "Dismiss" (7 days) and "Never Show Again" options.
+        - Accessibility Improvements – Added role="button" to non-link anchors, converted anchor tags to <span> where appropriate, and added control for target="_blank" for external links.
+        - TrxAddons: Hook for SportsPress to prevent redirecting to the “Welcome” screen after activation during demo import.
+        - Theme Core Check: Added warning if theme core isn't updated before skin update (to avoid missing functions).
+        - Backdrop Blur: New settings for sections, columns, containers, and all Elementor widgets; default semi-transparent background for sticky sections.
+        - HotSpot Widget: Major redesign for responsive positioning and styling; added tag selection, icon customizations, popup alignment, offsets, and more.
+    Fixed:
+        - Security: Fixed potential LFI vulnerability during pagination.
+        - TrxAddons: Tribe Events export now checks for new TEC tables (tec_events, tec_occurrences) if no events in wp_posts.
+        - Stack Sections: Fixed offsets, sticky section positioning on iOS, and animation issues with GSAP.
+        - TrxAddons: Fixed issue where inserting an empty header/footer would insert full page content.
+        - AJAX Responses: Standardized response parsing and error handling across theme/plugin.
+        - Mobile Menu: Fixed auto-close when clicking tabs inside the menu.
+        - PHP 8 Compatibility: Fixed various warnings and errors with string/integer operations and child post queries.
+        - Header Fixes: Ensured mobile menu button displays correctly in default headers not using shortcodes.
+        - Customizer: Fixed reset behavior for Logo option.
+        - Minor bug fixes and optimization.
+
+Version: 2.19.0 
+    Updated:
+		- Theme skin v.1.6
+    Fixed:
+        - Improve theme styles		
+
+Version: 2.18.0
+    Updated:
+        - QW Extension addon (to version 1.6.1)
+        - Optimized all image files stored in the plugin and theme folders
+    Added:
+        - TrxAddons: WPML – added translation support for our Elementor Extensions like "Background Text"
+        - theme_filter_page_title_selector filters in JS and PHP to allow replacement of the page title selector in Elementor skins and clones
+        - In the woocommerce.js script, added updating of the total number of products on the page after loading the next batch via load_more or infinite
+        - Added a forced check for addon and skin updates via the "Check again" link
+        - Added support for skin filtering keywords in the Theme Dashboard
+    Fixed:
+        - SEO attributes now respect the "SEO snippets" option to avoid validation issues
+        - Fix in the WooCommerce page processing script – Cart: after changing the shipping address on touch devices (mobiles, tablets), the product table disappeared
+        - Fix in the markup and styles of sub-tabs in theme and plugin options to align the spacing from the last sub-tab to the next tab’s heading
+        - In theme options, added a selector to display a divider if a hidden option (type=hidden) precedes it. Previously, the divider (border) was missing in this case
+        - Disabled initialization of the mediaelements script for videos inside the Revolution Slider
+        - Moved loading of translation domains and theme plugins to priority -1 on the after_setup_theme action
+        - Minor bug fixes and optimization
+    Removed:
+        - Removed 'medium' from external thumbnail sizes to prevent conflicts with the custom trx-addons-thumb-medium size
+        - The Twenty20 Image Before-After plugin is no longer recommended for installation (compatibility is retained); please use the Images Compare widget instead
+
+Version: 2.17.0 
+    Fixed:
+        - PHP fixes
+        - Improve theme styles
+
+
+Version: 2.16.0
+    Removed:
+        - Disabling of rendering replacement in the Post Featured Image block for FSE themes (works only for video, audio, and gallery formats now)
+    Fixed:
+        - Sticky sidebar positioning script on fullwidth pages, when fixed_blocks_sticky == false selected in the options
+        - Syntax in the function of the URL replacement for Vimeo videos
+
+Version: 2.15.0
+    Added:
+        - Option "Redirect 404"
+        - Option "Disable word hyphenation for the headings on tablets and mobile devices"
+        - Parameter "Show Description" in Layouts - Title shortcode
+        - Layouts: filter 'trx_addons_filter_sc_layout_content_need_inline_css' for custom layouts
+        - Elementor: default settings for compatibility with Elementor "Optimize Control Loading"
+        - Options for customization of shortcodes Switcher and HotSpot
+        - Slider Widget: responsiveness for "Slides per view" and "Slides space" parameters
+        - AI Helper: API support for ModelsLab music generation
+        - AI Helper: Text To Speech/Speech To Text/Voice Covering API from OpenAI and ModelsLab and a new widget Audio Generator (AGenerator)
+        - AI Helper IGenerator: script for repeated opening of images
+        - AI Helper: authorization parameters for Open AI and Google AI APIs to use proxy servers
+        - API Text To Speech / Speech To Text /
+        - Elementor Page Settings: a filter to disable a default section background for layouts
+    Fixed:
+        - Mouse Animation styles
+        - Revolution Slider: demo url to support a new version of slider tables
+        - FontAwesome 4 compatibility
+        - "NavMenu" script for layout submenus
+        - PHP8 Compatibility for CPT Services
+        - Iframe resize of fullscreen video
+        - Elementor 3.25.0+ compatibility
+        - AI Helper Chat: title and button styles
+        - API Stable Diffusion renamed to ModelLab
+        - xxx_get_file_dir() for file compilation in /uploads on multisite installations
+        - Rendering of Instagram video posts
+        - Woocommerce: styles of product discounts
+    Updated:
+        - QW Extension addon (to version 1.6.0)
+
+Version: 2.14.0
+    Added:
+        - AI Helper: option to choose the API version for Open AI Assistants
+        - AI Helper: parameter 'output_tokens' for text models
+        - Styling parameters for divider in Images Compare shortcode
+        - Roles and capabilities reset when switching to another skin
+        - Customization options for the submenus in the Menu Editor
+    Fixed:
+        - CSS\PHP fixes (shortcodes and layouts)
+        - AI Helper Chat: title styles
+        - Compatibility with Elementor plugin: widget "Spacer" when its "Size" equals 0 or is not defined
+        - Compatibility with Elementor plugin: priorities for basic classes registration in action 'elementor/init'
+        - Compatibility with Elementor plugin: removing duplicate attributes loading="xxx" and decoding="xxx" for tag <img> with Image Effects
+        - Compatibility with Elementor plugin: elementor-editor.js script for post search
+        - Compatibility with Elementor plugin: Global Colors Preview styles
+        - Compatibility with WPML plugin: icl_get_languages() replaced with filter "wpml_active_languages"
+        - Compatibility with WPML plugin: added wpml-config.xml file
+        - Compatibility with The Events Calendar plugin: category name, tags and breadcrumbs on the listing pages
+        - Dark/Light Switcher script
+        - Animation for dropdown menus
+        - Autoscroll for Swiper Slider v8
+        - Script for the video inserted as a link in the popup
+    Updated:
+        - QW Extension addon (to version 1.5.0)
+        - "Background Text" (marquee) now uses the heading font family by default
+    Removed:
+        - WP GDPR Compliance plugin (Cookie Information | Free WP GDPR Consent Plugin)
+
+Version: 2.13.0
+    Added:
+        - Tantric Massage Skin
+        - Wellness Center Homepage
+    Fixed:
+        - PHP fixes
+        - Improve theme styles 
+
+Version: 2.12.0
+    Added:
+        - AI Helper Image Generator & Media Library: support for the new image generation model DALL-E-3
+        - AI Helper Image Generator & Media Library: an option for choosing Stable Diffusion API server (stablediffusionapi.com or modelslab.com)
+        - AI Helper Image Generator & Media Library: an option "Autoload list of models" in Stable Diffusion and Stability AI API settings
+        - AI Helper Image Generator & Media Library: new models for Upscale (Stability AI) and Stable Diffusion.
+        - AI Helper: Chatbot AI Assistant to help with basic theme customization (title, tagline, logo, colors)
+        - AI Helper: support for Flowise AI API for chatbots
+        - AI Helper: support for Open AI Assistants API (GPT-4)
+        - AI Helper: support for Google AI API (aka Gemini)
+        - AI Helper: parameters for changing text and placeholders in AI Chat, Text Generator and Image Generator shortcodes
+        - AI Helper: "Embed External Chatbots" options
+        - AI Helper: "LoRA model" parameter for submodels
+        - AI Helper: "Proxy URL" parameter for API settings of Open AI and Google AI
+        - AI Helper: a "model choice" field in Gutenberg editor, Text Generator and AI Chat shortcodes
+        - AI Helper: customization parameters for styling a chat window in "AI Chat" shortcode
+        - AI Helper: Popup Layout for "AI Chat" shortcode
+        - AI Helper: "Remember on reload" option for "AI Chat" shortcode
+        - "Permanent" and switcher customization parameters for Dark/Light Switcher shortcode
+        - "Categories Order" option for the "Categories list" widget
+        - A contact form selection option for individual Team posts that overrides the global option for CPT Team
+        - Compatibility with The GDPR Framework plugin
+        - Meta data (variations) to the cart page
+        - Layout "Simple" for the Hotspot widget
+        - An option to change "More" button text for the Categories List widget
+    Fixed:
+        - Script for Bg-Canvas (Dynamic Background) on mobile devices
+        - Script for dropdown shift in RTL version
+        - PHP 8 compatibility: $content=null replaced with $content=''
+        - Switcher and Image Generator scripts
+        - Compatibility with WPML Multilingual CMS (xxx_is_external_url() function)
+        - Text shifting for "Background Text" module
+        - "WooCommerce Search" filter
+        - Styles for video added in portfolio items
+        - SVG icon animation in the Icons shortcode
+    Updated:
+        - Blogger shortcode styles
+        - QW Extension addon (to version 1.4.1)
+        - Elementor styles
+        - Gutenberg styles
+    Removed:
+        - Cookie Information plugin installation recommendation
+
+Version: 2.11.0 
+    Fixed:
+        - Improve theme styles
+
+Version: 2.10.0
+    Added:
+        - Top 5 Visited Pages for Dashboard Widget
+        - Popup alignment for Hotspot shortcode
+        - Attribute "playsinline" for video on iOS
+        - QuickCal plugin compatibility
+        - Elementor 3.16.0 compatibility (flexbox containers support)
+        - Autoupdate for "QW Extension" addon
+        - AI Helper: width and height parameters for Stable Diffusion
+        - AI Helper: new API support from Stability AI for image generation
+        - AI Helper: "Negative Prompt" and "Safety Checker" options to exclude non-desirable images
+        - AI Helper: Chat History shortcode
+        - AI Helper: "Upscale image" option for the Extended layout of Image Generator shortcode
+        - AI Helper: "System Prompt" parameter to add context for Image Generator shortcode
+        - AI Helper: рarameters "System Prompt", "Max. Tokens" and "Temperature" for Text Generator and AI Chat shortcodes
+        - AI Helper: an option to enable/disable prompt auto-translation into English for Image Generator shortcode
+    Fixed:
+        - Loop for video autoplay
+        - Scroll for CPT Portfolio archive page on mobiles
+        - Styles for WordPress 6.3 compatibility
+        - Booked appointments fix (2.4.4 version)
+        - Fly positioning on mobiles
+        - Tabs style for Switcher shortcode
+        - Icons for Х.com (Twitter) and TikTok
+        - Responsive styles for WooCommerce Extended Products
+        - Woocommerce product meta data for Blogger shortcode
+        - Legacy Widget styles in Widgets Editor
+        - Iframe resize for RevSlider
+    Updated:
+        - GSAP JavaScript animation library to 3.12.2
+        - The Events Calendar styles
+
+Version: 2.9.0
+    Added: Switcher shortcode
+    Added: Squeeze images shortcode
+    Added: Expand / Collapse addon
+    Added: New parm "Outside Top" for Titles in the slides
+    Added: New styles for Button shortcode (Slide,Flow,Veil,Curtain,Slant)
+    Updated: addon QW Extension (theme compatibility)
+        - add QW Services (Panel,Stylish,Price,Card,Plaque,Tricolore,Nodes)
+        - add QW Icons (Stylish)
+        - add QW Portfolio (Pack,Board,Chess,Simple,Case)
+        - add QW Testimonials (Date,Big)
+	- add style "Simple" for Slider Controls
+
+Version: 2.8.0
+    Fix: CSS\JS\PHP fixes
+    Added: New addon QW Extension (theme compatibility)
+
+Version: 2.7.0
+    Fix: PHP fixes for teams layouts
+    Fix: CSS\JS\PHP fixes (shortcods)
+    Added: New trx_addons option "Show mouse helper in swiper slider" 
+
+Version: v.2.6.0
+    Fix: CSS\JS\PHP fixes for WP 6.0 (shortcodes and layouts)
+    Fix: CSS\PHP fixes (shortcode and widget layouts)
+    Fix: Languages POT file
+    Fix: Improved compatibility with Booked plugin
+
+Version: 2.5.0
+    Added: WPC Smart Quick View for WooCommerce compatibility
+    Added: 3 new product styles for the product feed
+    Added: New functionality for WooCommerce
+    Added: Single product appearance improved
+    Added: Hotspot shortcode
+    Fix: CSS fixes (Booked)
+
+Version: 2.4.0
+    Fix: CSS\JS\PHP fixes for WP 6.0 (shortcodes and layouts)
+    Fix: CSS fixes (The Events Calendar)
+    Fix: Minor CSS\PHP fixes (shortcode and widget layouts)
+    Fix: Languages POT file
+    Fix: PHP8 - for Categories list widget
+
+Version: 2.3.1
+    Fixed:
+        - Improve theme styles
+
+Version: 2.3.0
+    Fix: CSS\JS\PHP fixes for WP 5.9+ (shortcodes and layouts)
+
+Version: 2.2.0
+    Fix: CSS\PHP fixes (shortcodes\widget layouts)
+    Fix: CSS fixes (The Events Calendar, Booked)
+    Fix: Improved compatibility with YITH Wishlist plugin.
+    Fix: WooCommerce Cart behavior on mobile devices.
+    Fix: WPML (translated page editing)
+
+Version: 2.1.0
+    Added: An ability to delete downloaded skins from the Theme Panel ( 'Delete' button in 'Theme Dashboard > Skins' tab )
+    Added: Option 'Footer style' for choosing a custom footer for single posts
+    Added: Child-Theme responsive.css
+    Fix: CSS\JS\PHP fixes (shortcode and widget layouts)
+    Fix: Improved option 'Optimize CSS and JS loading'
+    Fix: Improved Portfolio grids scaling (based on the number of posts displayed) and their responsive behaviour
+
+Version 2.0.1
+    Fixed:
+    - Global core upgrade (upgrade_allowed)
+
+Version 2.0.0
+	Updated:
+    - Theme сore
+    - Theme content
+    - Theme design
+    - Theme documentation
+
+    Changed:
+    - Theme Builder - Elementor
+
+    Removed:
+    - Essential Grid
+
+Version 1.6.5
+    Added:
+    - WP 5.7 compatibility
+    - Compatibility with The Events Calendar 5+
+    - ThemeREX Socials plugin
+
+    Fixed:
+    - Theme styles
+
+    Changed:
+    - Theme content
+
+Version 1.6.4
+    Added:
+        - WP 5.6 compatibility
+        - PHP 7.4 compatibility
+
+    Fixed:
+        - Update plugins to their latest versions
+
+    Changed:
+        - Update demo data
+
+
+Version 1.6.3
+	Added:
+        - Elementor Compatibility
+	    - Elementor Homepage
+    Fixed:
+        - Update plugins to the latest versions
+        - Improve theme styles
+	Removed:
+            - WordPress Social Login plugin
+	   
+Version 1.6.2
+    Fixed:
+        - Update plugins to their latest versions
+        - Compatibility with Woocommerce 5.4
+        - Improve theme styles
+        - Color schemes
+
+Version 1.6.1
+    Fixed:
+        - Update plugins to their latest versions
+        - Compatibility with Woocommerce 3.8
+        - Improve theme styles
+    Added:
+        - ThemeREX Updater plugin
+        - elegro Crypto Payment plugin
+    Changed:
+        - Replace custom function with WP function
+
+
+Version 1.6
+    Added:
+        - "Mobile logo image" field
+        - Theme localization in Spanish is added
+        - Instagram Widget By WPzoom plugin
+    Fixed:
+        - Update plugins to their latest versions
+        - Optimization for Gutenberg
+        - Improve theme styles
+        - Update JS scripts
+        - Update documentation
+    Removed:
+        - Instagram widget plugin
+
+Version 1.5
+    Added:
+        - Bookly Lite plugin
+        - Home-4 page
+        - Home-5 page
+        - 2 Color scheme
+
+    Fixed:
+        - Improve theme styles
+
+    Changed:
+        - Splash
+
+Version 1.4.7
+    Fixed:
+        - Next and Previous Links on the events single page
+
+Version 1.4.6
+	Fixed:
+	    - Equal height
+	    - Optimize code
+
+Version 1.4.5
+    Fixed:
+        - Optimize code
+        - Update plugins to their latest versions
+        - Compatibility with The Events Calendar 4.6.22
+        - Improve theme styles
+	    - Equal height
+
+Version 1.4.4
+    Fixed:
+        - Optimize code
+        - Update plugins to their latest versions
+
+Version 1.4.3
+    Fixed:
+        - Update plugins to their latest versions
+        - Section shortcode
+        - Update TRX Utils plugin
+
+Version 1.4.1
+    Fixed:
+        - Compatibility with WordPress 4.9.7
+        - Update plugins to their latest versions
+        - Improve theme styles
+        - Change hover for team items
+        - Compatibility with Woocommerce 3.4.3
+        - Update documentation
+
+    Added:
+        - Checkboxes to default contact forms to make forms GDPR-compliant
+        - Privacy Policy page
+        - "Title link" option to menu items shortcode. Using this option you can choose between displaying the title of a menu item as a text or as a link.
+
+Version 1.4
+	Added:
+		- GDPR Framework plugin
+		- Alert to Demo data installation
+		- Compatibility with Gutenberg
+	Fixed:
+		- Move Importer to ThemeREX Utilities plugin
+		- Update plugins to their latest versions
+		- Update documentation
+
+Version 1.3.1
+	Fixed:
+	    - Hide row options in Visual Composer
+
+Version 1.3.0
+	Mobile menu position is changed 
+	Visual Composer updated 
+	
+Version 1.2.9
+	Visual Composer updated 
+	
+Version 1.2.8
+	Plugins updated
+
+Version 1.2.7
+	Fixed compatibility with custom font-face
+	Plugins updated
+
+Version 1.2.6
+    Plugins updated
+    Add preloader
+
+Version 1.2.5
+    Fix theme activation
+
+Version 1.2.4
+    Fix Emailer validation
+    Plugins updated
+    Compatibility with PHP7
+
+Version 1.2.3
+    The theme is now compatible with version WooCommerce 3.0.1 and higher
+
+Version 1.2.2
+    Events demo data updated
+
+Version 1.2.1
+    Color Scheme Builder fixed
+
+Version 1.2
+    Demo data installer updated
+    Security fixes
+    Plugins updated
+
+Version 1.1
+	Social login improved
+
+Version 1.0
+	Release Jacqueline

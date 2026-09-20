@@ -1,0 +1,13 @@
+[
+	{
+		"block": "core/quote",
+		"styles": [
+			{
+				"name": "themed-quote",
+				"label": "Themed Quote",
+				"is_default": true,
+				"inline_style": ".wp-block-quote.is-style-themed-quote { background-color: %text_link%; } .wp-block-quote.is-style-themed-quote,.wp-block-quote.is-style-themed-quote:before { color: %bg_color%; }"
+			}
+		]
+	}
+]

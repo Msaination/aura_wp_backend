@@ -1,0 +1,161 @@
+/* Bookly Responsive Appointment Booking Tool
+----------------------------------------------------------------- */
+.bookly-form {
+  /* Calendar */
+}
+.bookly-form .select_container:after {
+  font-size: 15px;
+  right: 0.3em;
+}
+.bookly-form select {
+  padding: 6px 8px !important;
+}
+.bookly-form input[type="text"],
+.bookly-form input[type="number"],
+.bookly-form input[type="password"],
+.bookly-form select,
+.bookly-form textarea {
+  padding: 6px 8px !important;
+  -webkit-border-radius: 0 !important;
+  -ms-border-radius: 0 !important;
+  border-radius: 0 !important;
+  color: var(--theme-color-input_text) !important;
+  background-color: var(--theme-color-input_bg_color) !important;
+  border-color: var(--theme-color-input_bd_color) !important;
+}
+.bookly-form input[type="text"]:focus,
+.bookly-form input[type="number"]:focus,
+.bookly-form input[type="password"]:focus,
+.bookly-form select:focus,
+.bookly-form textarea:focus {
+  color: var(--theme-color-input_dark) !important;
+  background-color: var(--theme-color-input_bg_hover) !important;
+  border-color: var(--theme-color-input_bd_hover) !important;
+}
+.bookly-form::placeholder {
+  color: var(--theme-color-input_light) !important;
+}
+.bookly-form .bookly-btn, .bookly-form .bookly-btn > span {
+  font-size: 11px !important;
+  line-height: 19px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2.2px !important;
+  -webkit-border-radius: 0 !important;
+  -ms-border-radius: 0 !important;
+  border-radius: 0 !important;
+}
+.bookly-form .bookly-nav-steps {
+  border-color: var(--theme-color-bd_color) !important;
+}
+.bookly-form .bookly-progress-tracker .step {
+  background: var(--theme-color-bd_color);
+}
+.bookly-form .bookly-progress-tracker > div:last-child .step,
+.bookly-form .bookly-progress-tracker > div:first-child .step {
+  -webkit-border-radius: 0;
+  -ms-border-radius: 0;
+  border-radius: 0;
+}
+.bookly-form .picker__header {
+  letter-spacing: 0.7px !important;
+  text-transform: uppercase !important;
+  font-style: normal !important;
+}
+.bookly-form .picker__year {
+  font-style: normal !important;
+}
+.bookly-form .picker__weekday {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.7px !important;
+}
+.bookly-form .picker__button--today,
+.bookly-form .picker__button--clear {
+  font-size: 11px !important;
+  line-height: 22px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 2.2px !important;
+  -webkit-border-radius: 0 !important;
+  -ms-border-radius: 0 !important;
+  border-radius: 0 !important;
+}
+.bookly-form .picker__day--selected,
+.bookly-form .picker__day--selected:hover,
+.bookly-form .picker--focused .picker__day--selected,
+.bookly-form .picker__day--infocus:hover,
+.bookly-form .picker__day--outfocus:hover,
+.bookly-form .picker--focused .picker__day--highlighted,
+.bookly-form .picker__holder {
+  -webkit-border-radius: 0 !important;
+  -ms-border-radius: 0 !important;
+  border-radius: 0 !important;
+  border: 1px solid #fff !important;
+}
+.bookly-form .picker__holder {
+  border: none !important;
+}
+.bookly-form .picker--opened .picker__holder {
+  -webkit-box-shadow: none !important;
+  -ms-box-shadow: none !important;
+  box-shadow: none !important;
+}
+.bookly-form .picker__nav--prev,
+.bookly-form .picker__nav--next {
+  -webkit-border-radius: 0 !important;
+  -ms-border-radius: 0 !important;
+  border-radius: 0 !important;
+}
+.bookly-form .bookly-service-step .bookly-week-days input[type="checkbox"] {
+  position: static !important;
+  clip: auto !important;
+}
+.bookly-form .bookly-service-step .bookly-week-days input[type="checkbox"] + label:before {
+  display: none;
+}
+.bookly-form .bookly-service-step .bookly-week-days label,
+.bookly-form .bookly-repeat-step .bookly-week-days label {
+  margin: -15px auto 0;
+}
+.bookly-form .bookly-time-range select {
+  padding: 6px 20px 6px 8px !important;
+  min-width: 95px;
+}
+.bookly-form *:focus {
+  -webkit-box-shadow: none !important;
+  -ms-box-shadow: none !important;
+  box-shadow: none !important;
+}
+.bookly-form .bookly-payment-nav > div > label > input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  margin-right: 3px !important;
+}
+.bookly-form .bookly-columnizer .bookly-day,
+.bookly-form .bookly-columnizer .bookly-hour {
+  -webkit-border-radius: 0;
+  -ms-border-radius: 0;
+  border-radius: 0;
+}
+.bookly-form .picker__day--today {
+  -webkit-border-radius: 0 !important;
+  -ms-border-radius: 0 !important;
+  border-radius: 0 !important;
+}
+
+.iti--allow-dropdown input.iti__tel-input,
+.iti--allow-dropdown input.iti__tel-input[type="tel"],
+.iti--allow-dropdown input.iti__tel-input[type="text"] {
+  padding-left: 52px !important;
+}
+
+/* Responsive */
+@media (max-width: 767px) {
+  .bookly-mobile-step-1,
+  .bookly-details-step {
+    margin-right: 0;
+  }
+}
+
+

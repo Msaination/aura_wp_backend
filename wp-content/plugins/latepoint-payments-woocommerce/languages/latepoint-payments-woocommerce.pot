@@ -1,0 +1,171 @@
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: LatePoint Addon - Payments Woocommerce\n"
+"POT-Creation-Date: 2025-09-27 20:42-0700\n"
+"PO-Revision-Date: 2025-09-27 20:42-0700\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
+"X-Generator: Poedit 3.5\n"
+"X-Poedit-Basepath: ..\n"
+"X-Poedit-Flags-xgettext: --add-comments=translators:\n"
+"X-Poedit-WPHeader: latepoint-payments-woocommerce.php\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-KeywordsList: __;_e;_n:1,2;_x:1,2c;_ex:1,2c;_nx:4c,1,2;esc_attr__;"
+"esc_attr_e;esc_attr_x:1,2c;esc_html__;esc_html_e;esc_html_x:1,2c;_n_noop:1,2;"
+"_nx_noop:3c,1,2;__ngettext_noop:1,2\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-SearchPathExcluded-0: *.min.js\n"
+
+#: latepoint-payments-woocommerce.php:170
+msgid "Open WooCommerce Order"
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:254
+msgid "General Settings"
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:257
+msgid ""
+"Make sure WooCommerce plugin is installed. On a checkout step of booking "
+"form, customer will be sent to WooCommerce checkout page to process the "
+"payment."
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:260
+msgid "Confirmation"
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:260
+msgid "Default WooCommerce success page"
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:261
+msgid "Open LatePoint confirmation popup"
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:270
+msgid "Products for Bookings"
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:273
+msgid ""
+"LatePoint creates a products in WooCommerce that is used for bookings. When "
+"a customer tries to pay for their appointment - a checkout page is being "
+"generated with that products in cart, and the price is set to match the "
+"total booking price."
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:370
+#: latepoint-payments-woocommerce.php:382
+msgid "Redirecting to checkout. Please wait..."
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:391
+#: latepoint-payments-woocommerce.php:392
+#: latepoint-payments-woocommerce.php:402
+#: latepoint-payments-woocommerce.php:403
+msgid "Woocommerce"
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:546
+msgid "Payments and Credits"
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:552
+msgid "Discount"
+msgstr ""
+
+#: latepoint-payments-woocommerce.php:555
+msgid "Tax"
+msgstr ""
+
+#: lib/controllers/payments_woocommerce_controller.php:37
+#: lib/helpers/payments_woocommerce_helper.php:457
+#: lib/helpers/payments_woocommerce_helper.php:478
+msgid "Booking slot is not available anymore."
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:55
+msgid "Status:"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:59
+msgid "Synchronized"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:65
+msgid "Are you sure you want to re-generate a products?"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:68
+msgid "re-sync"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:71
+msgid "Not Synchronized"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:76
+msgid "sync"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:108
+msgid "Payment Error"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:113
+msgid "Payment Error, token missing"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:123
+msgid "Invalid Transaction"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:130
+msgid "Order #"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:134
+msgid "Cannot Refund"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:421
+#: lib/helpers/payments_woocommerce_helper.php:441
+msgid "Latepoint"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:607
+msgid "Woocommerce Tax"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:608
+msgid "Woocommerce Discount"
+msgstr ""
+
+#: lib/helpers/payments_woocommerce_helper.php:661
+msgid ""
+"If you choose to disable the login option, please make sure that guest "
+"checkout is enabled in WooCommerce settings"
+msgstr ""
+
+#. Plugin Name of the plugin/theme
+msgid "LatePoint Addon - Payments Woocommerce"
+msgstr ""
+
+#. Plugin URI of the plugin/theme
+#. Author URI of the plugin/theme
+msgid "https://latepoint.com/"
+msgstr ""
+
+#. Description of the plugin/theme
+msgid "LatePoint addon for payments via Woocommerce"
+msgstr ""
+
+#. Author of the plugin/theme
+msgid "LatePoint"
+msgstr ""
