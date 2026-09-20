@@ -38,9 +38,9 @@ define( 'DB_CHARSET', 'utf8mb4' );
 /** The database collate type. Don't change this if in doubt. */
 define( 'DB_COLLATE', '' );
 
-/** Set the backend install to the live subdomain URL. */
-define( 'WP_HOME', 'https://backend.monticarlo.co.za' );
-define( 'WP_SITEURL', 'https://backend.monticarlo.co.za' );
+/** Set the local backend install to the MAMP-served localhost URL. */
+define( 'WP_HOME', 'http://localhost:8888/AuraDev/backend/' );
+define( 'WP_SITEURL', 'http://localhost:8888/AuraDev/backend/' );
 
 /**#@+
  * Authentication unique keys and salts.
