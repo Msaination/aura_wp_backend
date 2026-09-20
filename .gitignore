@@ -6,8 +6,6 @@
 .env
 .env.*
 wp-config-local.php
-wp-config.php
-.htaccess
 
 # WordPress generated content and local-only data
 wp-content/uploads/
