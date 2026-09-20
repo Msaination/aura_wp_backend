@@ -1,57 +1,54 @@
-# WordPress core
-/wp-config.php
-/.htaccess
-/license.txt
-/readme.html
-/wp-activate.php
-/wp-blog-header.php
-/wp-comments-post.php
-/wp-config-sample.php
-/wp-cron.php
-/wp-links-opml.php
-/wp-load.php
-/wp-login.php
-/wp-mail.php
-/wp-settings.php
-/wp-signup.php
-/wp-trackback.php
-/xmlrpc.php
+# Keep WordPress core files required to run the site.
+# Do not ignore wp-config.php or the WordPress bootstrap files.
+# The core installation must remain tracked.
 
-# WordPress uploads / generated files
+# Local environment files
+.env
+.env.*
+wp-config-local.php
+wp-config.php
+.htaccess
+
+# WordPress generated content and local-only data
 wp-content/uploads/
 wp-content/cache/
 wp-content/upgrade/
 wp-content/blogs.dir/
-wp-content/mu-plugins/
 wp-content/backup-db/
 wp-content/advanced-cache.php
 wp-content/wp-cache-config.php
 wp-content/object-cache.php
-
-# Large local backup archives
+wp-content/languages/*.mo
+wp-content/languages/*.po
 wp-content/ai1wm-backups/
-*.wpress
+wp-content/mu-plugins/
 
-# Common local env / editor files
+# Large archive backups and export files
+*.wpress
+*.zip
+*.tar.gz
+
+# Common local/editor artifacts
 .DS_Store
 Thumbs.db
 *.log
 *.sql
 *.sqlite
+*.tmp
+*.bak
+*.swp
 .vscode/
 .idea/
 
-# Local environment overrides
+# Dependency directories that should not be versioned
+vendor/
+node_modules/
+
+# Ignore theme/plugin build output if generated locally
 wp-content/themes/*/node_modules/
 wp-content/themes/*/.cache/
 wp-content/plugins/*/node_modules/
 wp-content/plugins/*/.cache/
 
-# Composer / PHP deps if used
-/vendor/
-composer.lock
-
-# Temporary files
-*.tmp
-*.bak
-*.swp
+# Ignore local backups but keep the clean project files tracked
+wp-content/backups/
