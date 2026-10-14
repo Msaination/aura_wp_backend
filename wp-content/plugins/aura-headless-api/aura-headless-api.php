@@ -13,10 +13,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 final class Aura_Headless_API {
 	private const REST_NAMESPACE = 'aura/v1';
-	private const PAY_LATER_ONLY = true;
+	private const PAY_LATER_ONLY = false;
 
 	public static function init() {
 		add_action( 'rest_api_init', array( self::class, 'register_routes' ) );
+		add_filter( 'woocommerce_get_return_url', array( self::class, 'filter_checkout_return_url' ), 20, 2 );
+		add_filter( 'woocommerce_gateway_payfast_payment_data_to_send', array( self::class, 'filter_payfast_notify_url' ), 20, 2 );
 	}
 
 	public static function register_routes() {
@@ -127,6 +129,16 @@ final class Aura_Headless_API {
 			array(
 				'methods'             => WP_REST_Server::READABLE,
 				'callback'            => array( self::class, 'bootstrap_checkout' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/checkout-confirmation/(?P<token>[A-Za-z0-9]+)',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'get_checkout_confirmation' ),
 				'permission_callback' => '__return_true',
 			)
 		);
@@ -790,8 +802,9 @@ final class Aura_Headless_API {
 		set_transient(
 			'aura_checkout_' . $token,
 			array(
-				'gatewayId'     => $gateway_id,
-				'orderIntentKey' => $order_intent->intent_key,
+				'gatewayId'       => $gateway_id,
+				'orderIntentKey'  => $order_intent->intent_key,
+				'confirmationUrl' => self::build_confirmation_url( $payload['returnUrl'] ?? '' ),
 			),
 			15 * MINUTE_IN_SECONDS
 		);
@@ -812,6 +825,18 @@ final class Aura_Headless_API {
 				__( 'This checkout link has expired. Please return to Aura Spa and try again.', 'aura-headless-api' ),
 				array( 'status' => 410 )
 			);
+		}
+		$existing_order_id = absint( $payload['orderId'] ?? 0 );
+		$existing_order    = $existing_order_id ? wc_get_order( $existing_order_id ) : false;
+		if (
+			$existing_order &&
+			(string) $existing_order->get_meta( '_latepoint_order_intent_key' ) === (string) $payload['orderIntentKey'] &&
+			$existing_order->is_paid()
+		) {
+			$response = new WP_REST_Response( null, 302 );
+			$response->header( 'Location', $existing_order->get_checkout_order_received_url() );
+			$response->header( 'Cache-Control', 'no-store, max-age=0' );
+			return $response;
 		}
 
 		$order_intent = OsOrderIntentHelper::get_order_intent_by_intent_key( $payload['orderIntentKey'] );
@@ -871,12 +896,239 @@ final class Aura_Headless_API {
 
 		WC()->session->set( 'chosen_payment_method', $payload['gatewayId'] );
 		WC()->cart->calculate_totals();
+		$available_gateways = WC()->payment_gateways()->get_available_payment_gateways();
+		if ( empty( $available_gateways[ $payload['gatewayId'] ] ) ) {
+			return new WP_Error(
+				'aura_invalid_payment_method',
+				__( 'The selected payment method is unavailable for this booking.', 'aura-headless-api' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		$order = $existing_order;
+		if ( $order ) {
+			if (
+				(string) $order->get_meta( '_latepoint_order_intent_key' ) !== (string) $payload['orderIntentKey'] ||
+				$order->get_payment_method() !== $payload['gatewayId'] ||
+				! $order->has_status( array( 'pending', 'failed' ) )
+			) {
+				return new WP_Error(
+					'aura_checkout_order_unavailable',
+					__( 'This payment session is no longer available. Please return to your booking and try again.', 'aura-headless-api' ),
+					array( 'status' => 409 )
+				);
+			}
+		} else {
+			$customer = WC()->customer;
+			$order_data = array(
+				'payment_method'     => $payload['gatewayId'],
+				'billing_first_name' => $customer->get_billing_first_name(),
+				'billing_last_name'  => $customer->get_billing_last_name(),
+				'billing_company'    => $customer->get_billing_company(),
+				'billing_address_1'  => $customer->get_billing_address_1(),
+				'billing_address_2'  => $customer->get_billing_address_2(),
+				'billing_city'       => $customer->get_billing_city(),
+				'billing_state'      => $customer->get_billing_state(),
+				'billing_postcode'   => $customer->get_billing_postcode(),
+				'billing_country'    => $customer->get_billing_country(),
+				'billing_email'      => $customer->get_billing_email(),
+				'billing_phone'      => $customer->get_billing_phone(),
+				'order_comments'     => WC()->session->get( 'store_api_customer_note' ) ?? '',
+			);
+			$order_id = WC()->checkout()->create_order( $order_data );
+			if ( is_wp_error( $order_id ) ) {
+				return new WP_Error(
+					'aura_checkout_order_failed',
+					$order_id->get_error_message(),
+					array( 'status' => 500 )
+				);
+			}
+
+			$order = wc_get_order( $order_id );
+			if ( ! $order || (string) $order->get_meta( '_latepoint_order_intent_key' ) !== (string) $payload['orderIntentKey'] ) {
+				return new WP_Error(
+					'aura_checkout_order_failed',
+					__( 'The appointment could not be attached to its payment order.', 'aura-headless-api' ),
+					array( 'status' => 500 )
+				);
+			}
+			$order->update_meta_data( '_aura_checkout_token', $token );
+			$order->update_meta_data( '_aura_confirmation_url', $payload['confirmationUrl'] ?? '' );
+			$order->save();
+
+			do_action( 'woocommerce_checkout_order_processed', $order_id, $order_data, $order );
+			$payload['orderId'] = (int) $order_id;
+			set_transient( 'aura_checkout_' . $token, $payload, DAY_IN_SECONDS );
+		}
+
+		$order_id = $order->get_id();
+		WC()->session->set( 'order_awaiting_payment', $order_id );
+		WC()->session->save_data();
+		$payment_result = $available_gateways[ $payload['gatewayId'] ]->process_payment( $order_id );
+		if ( ! is_array( $payment_result ) || 'success' !== ( $payment_result['result'] ?? '' ) ) {
+			return new WP_Error(
+				'aura_gateway_redirect_failed',
+				__( 'The payment provider could not be started. Please try again.', 'aura-headless-api' ),
+				array( 'status' => 502 )
+			);
+		}
+		$payment_result['order_id'] = $order_id;
+		$payment_result = apply_filters( 'woocommerce_payment_successful_result', $payment_result, $order_id );
+		if ( empty( $payment_result['redirect'] ) ) {
+			return new WP_Error(
+				'aura_gateway_redirect_failed',
+				__( 'The payment provider did not return a payment page.', 'aura-headless-api' ),
+				array( 'status' => 502 )
+			);
+		}
 
 		$response = new WP_REST_Response( null, 302 );
-		$response->header( 'Location', wc_get_checkout_url() );
+		$response->header( 'Location', esc_url_raw( $payment_result['redirect'] ) );
 		$response->header( 'Cache-Control', 'no-store, max-age=0' );
 
 		return $response;
+	}
+
+	public static function filter_checkout_return_url( $return_url, $order ) {
+		if ( ! $order instanceof WC_Order ) {
+			return $return_url;
+		}
+
+		$token             = (string) $order->get_meta( '_aura_checkout_token' );
+		$confirmation_url  = (string) $order->get_meta( '_aura_confirmation_url' );
+		$checkout_payload  = $token ? get_transient( 'aura_checkout_' . $token ) : false;
+
+		if ( ! $token || ! $confirmation_url || ! is_array( $checkout_payload ) || empty( $checkout_payload['orderId'] ) ) {
+			return $return_url;
+		}
+
+		return add_query_arg( 'checkoutToken', $token, $confirmation_url );
+	}
+
+	public static function filter_payfast_notify_url( $payment_data, $order_id ) {
+		if ( ! defined( 'AURA_PAYFAST_NOTIFY_URL' ) || ! is_array( $payment_data ) ) {
+			return $payment_data;
+		}
+
+		$notify_url = esc_url_raw( trim( (string) AURA_PAYFAST_NOTIFY_URL ) );
+		$parts      = wp_parse_url( $notify_url );
+		if (
+			empty( $parts['scheme'] ) ||
+			empty( $parts['host'] ) ||
+			! in_array( $parts['scheme'], array( 'http', 'https' ), true )
+		) {
+			return $payment_data;
+		}
+
+		$payment_data['notify_url'] = $notify_url;
+		return $payment_data;
+	}
+
+	public static function get_checkout_confirmation( $request ) {
+		$token   = sanitize_text_field( $request['token'] );
+		$payload = get_transient( 'aura_checkout_' . $token );
+		if ( ! is_array( $payload ) || empty( $payload['orderId'] ) || empty( $payload['orderIntentKey'] ) ) {
+			return new WP_Error(
+				'aura_confirmation_expired',
+				__( 'This confirmation link has expired.', 'aura-headless-api' ),
+				array( 'status' => 410 )
+			);
+		}
+
+		$wc_order = wc_get_order( absint( $payload['orderId'] ) );
+		if (
+			! $wc_order ||
+			(string) $wc_order->get_meta( '_aura_checkout_token' ) !== $token ||
+			(string) $wc_order->get_meta( '_latepoint_order_intent_key' ) !== (string) $payload['orderIntentKey']
+		) {
+			return new WP_Error(
+				'aura_confirmation_not_found',
+				__( 'The booking confirmation could not be found.', 'aura-headless-api' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		if ( ! $wc_order->is_paid() ) {
+			return new WP_REST_Response( array( 'status' => 'pending' ), 202 );
+		}
+
+		$order_intent = OsOrderIntentHelper::get_order_intent_by_intent_key( $payload['orderIntentKey'] );
+		if ( $order_intent->is_new_record() || empty( $order_intent->order_id ) ) {
+			return new WP_REST_Response( array( 'status' => 'pending' ), 202 );
+		}
+
+		$order             = new OsOrderModel( (int) $order_intent->order_id );
+		$order_bookings    = $order->get_bookings_from_order_items( true );
+		$confirmed_booking = $order_bookings ? reset( $order_bookings ) : false;
+		if ( ! $confirmed_booking || $confirmed_booking->is_new_record() ) {
+			foreach ( $order->get_items( true ) as $order_item ) {
+				if ( ! $order_item->is_booking() ) {
+					continue;
+				}
+				$item_data = json_decode( $order_item->item_data, true );
+				if ( ! is_array( $item_data ) || empty( $item_data['service_id'] ) ) {
+					continue;
+				}
+				$candidate_booking = OsBookingHelper::build_booking_model_from_item_data( $item_data );
+				if ( ! empty( $candidate_booking->service_id ) && ! empty( $candidate_booking->start_date ) && ! empty( $candidate_booking->start_time ) ) {
+					$confirmed_booking = $candidate_booking;
+					break;
+				}
+			}
+		}
+
+		if ( ! $confirmed_booking || empty( $confirmed_booking->service_id ) || empty( $confirmed_booking->start_date ) || empty( $confirmed_booking->start_time ) ) {
+			return new WP_REST_Response( array( 'status' => 'pending' ), 202 );
+		}
+
+		$service                  = new OsServiceModel( (int) $confirmed_booking->service_id );
+		$agent                    = new OsAgentModel( (int) $confirmed_booking->agent_id );
+		$ical_string              = OsBookingHelper::generate_ical_event_string( $confirmed_booking );
+		$calendar_qr              = class_exists( 'chillerlan\\QRCode\\QRCode' )
+			? ( new \chillerlan\QRCode\QRCode() )->render( $ical_string )
+			: '';
+		$addon_service_details    = self::get_booking_service_extra_details( $confirmed_booking );
+		$total_duration_minutes   = (int) $confirmed_booking->duration + array_sum(
+			array_map( static fn( $item ) => (int) ( $item['durationMinutes'] ?? 0 ), $addon_service_details )
+		);
+		$total                     = (float) $wc_order->get_total();
+		$confirmation              = array(
+			'code'                 => (string) $confirmed_booking->booking_code,
+			'serviceName'          => (string) $service->name,
+			'primaryServiceName'   => (string) $service->name,
+			'therapistName'        => (string) $agent->name_for_front,
+			'date'                 => (string) $confirmed_booking->start_date,
+			'startMinutes'         => (int) $confirmed_booking->start_time,
+			'endMinutes'           => (int) $confirmed_booking->end_time,
+			'duration'             => (int) $confirmed_booking->duration,
+			'totalDurationMinutes' => $total_duration_minutes,
+			'status'               => (string) $confirmed_booking->status,
+			'paymentMethod'        => $wc_order->get_payment_method_title(),
+			'total'                => OsMoneyHelper::format_price( $total ),
+			'totalPrice'           => $total,
+			'addonServices'        => $addon_service_details,
+			'calendarQr'           => $calendar_qr,
+			'calendarDataUri'      => 'data:text/calendar;base64,' . base64_encode( $ical_string ),
+		);
+
+		$response = rest_ensure_response( array( 'status' => 'paid', 'confirmation' => $confirmation ) );
+		$response->header( 'Cache-Control', 'no-store, max-age=0' );
+		return $response;
+	}
+
+	private static function build_confirmation_url( $return_url ) {
+		$parts = wp_parse_url( esc_url_raw( $return_url ) );
+		if ( empty( $parts['scheme'] ) || empty( $parts['host'] ) || ! in_array( $parts['scheme'], array( 'http', 'https' ), true ) ) {
+			return '';
+		}
+
+		$confirmation_url = $parts['scheme'] . '://' . $parts['host'];
+		if ( ! empty( $parts['port'] ) ) {
+			$confirmation_url .= ':' . (int) $parts['port'];
+		}
+		$confirmation_url .= '/book/confirmation';
+
+		return wp_validate_redirect( $confirmation_url, '' );
 	}
 
 	private static function normalize_booking_service_extras( $service_id, $addon_services ) {
@@ -954,6 +1206,14 @@ final class Aura_Headless_API {
 					array( 'status' => 400 )
 				);
 			}
+		}
+
+		if ( ! preg_match( '/^0\d{9}$/', $customer_params['phone'] ) ) {
+			return new WP_Error(
+				'aura_invalid_customer_phone',
+				__( 'A valid 10-digit cell number starting with 0 is required.', 'aura-headless-api' ),
+				array( 'status' => 400 )
+			);
 		}
 
 		if ( empty( $customer_params['email'] ) || ! is_email( $customer_params['email'] ) ) {
