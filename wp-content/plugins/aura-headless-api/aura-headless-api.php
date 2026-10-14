@@ -585,16 +585,20 @@ final class Aura_Headless_API {
 			);
 		}
 
-		$service_id   = absint( $payload['serviceId'] ?? 0 );
-		$agent_id     = absint( $payload['therapistId'] ?? 0 );
-		$duration     = absint( $payload['duration'] ?? 0 );
-		$start_date   = sanitize_text_field( $payload['startDate'] ?? '' );
-		$start_time   = isset( $payload['startMinutes'] ) && is_numeric( $payload['startMinutes'] ) ? (int) $payload['startMinutes'] : -1;
 		$gateway_id   = sanitize_key( $payload['paymentMethod'] ?? '' );
 		$is_pay_later = 'local' === $gateway_id;
 		$customer_data = is_array( $payload['customer'] ?? null ) ? $payload['customer'] : array();
-		$service      = new OsServiceModel( $service_id );
-		$agent        = new OsAgentModel( $agent_id );
+		$booking_payloads = $payload['appointments'] ?? array();
+		if ( ! is_array( $booking_payloads ) || empty( $booking_payloads ) ) {
+			$booking_payloads = array( $payload );
+		}
+		if ( count( $booking_payloads ) > 10 ) {
+			return new WP_Error(
+				'aura_too_many_bookings',
+				__( 'An order can contain up to 10 appointments.', 'aura-headless-api' ),
+				array( 'status' => 400 )
+			);
+		}
 
 		if ( self::PAY_LATER_ONLY && ! $is_pay_later ) {
 			return new WP_Error(
@@ -604,34 +608,93 @@ final class Aura_Headless_API {
 			);
 		}
 
-		if ( ! $service->exists() || ! $service->is_active() || $service->is_hidden() ) {
-			return new WP_Error( 'aura_service_not_found', __( 'The requested treatment was not found.', 'aura-headless-api' ), array( 'status' => 404 ) );
-		}
+		$booking_contexts = array();
+		foreach ( $booking_payloads as $booking_payload ) {
+			if ( ! is_array( $booking_payload ) ) {
+				return new WP_Error(
+					'aura_invalid_appointment',
+					__( 'One of the selected appointments is invalid.', 'aura-headless-api' ),
+					array( 'status' => 400 )
+				);
+			}
 
-		$allowed_durations = array_map(
-			static function ( $duration_option ) {
-				return (int) $duration_option['duration'];
-			},
-			$service->get_all_durations_arr()
-		);
-		$connected_agent_ids = array_map(
-			'intval',
-			OsConnectorHelper::get_connected_object_ids( 'agent_id', array( 'service_id' => $service_id ) )
-		);
-		if (
-			! in_array( $duration, $allowed_durations, true ) ||
-			! $agent->exists() ||
-			! in_array( $agent_id, $connected_agent_ids, true ) ||
-			LATEPOINT_AGENT_STATUS_DISABLED === $agent->status ||
-			! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $start_date ) ||
-			$start_time >= 24 * 60
-		) {
-			return new WP_Error(
-				'aura_invalid_appointment',
-				__( 'The selected appointment is invalid.', 'aura-headless-api' ),
-				array( 'status' => 400 )
+			$service_id = absint( $booking_payload['serviceId'] ?? 0 );
+			$agent_id   = absint( $booking_payload['therapistId'] ?? 0 );
+			$duration   = absint( $booking_payload['duration'] ?? 0 );
+			$start_date = sanitize_text_field( $booking_payload['startDate'] ?? '' );
+			$start_time = isset( $booking_payload['startMinutes'] ) && is_numeric( $booking_payload['startMinutes'] ) ? (int) $booking_payload['startMinutes'] : -1;
+			$service    = new OsServiceModel( $service_id );
+			$agent      = new OsAgentModel( $agent_id );
+
+			if ( ! $service->exists() || ! $service->is_active() || $service->is_hidden() ) {
+				return new WP_Error( 'aura_service_not_found', __( 'One of the requested treatments was not found.', 'aura-headless-api' ), array( 'status' => 404 ) );
+			}
+
+			$allowed_durations = array_map(
+				static function ( $duration_option ) {
+					return (int) $duration_option['duration'];
+				},
+				$service->get_all_durations_arr()
+			);
+			$connected_agent_ids = array_map(
+				'intval',
+				OsConnectorHelper::get_connected_object_ids( 'agent_id', array( 'service_id' => $service_id ) )
+			);
+			if (
+				! in_array( $duration, $allowed_durations, true ) ||
+				! $agent->exists() ||
+				! in_array( $agent_id, $connected_agent_ids, true ) ||
+				LATEPOINT_AGENT_STATUS_DISABLED === $agent->status ||
+				! preg_match( '/^\d{4}-\d{2}-\d{2}$/', $start_date ) ||
+				$start_time < 0 ||
+				$start_time >= 24 * 60
+			) {
+				return new WP_Error(
+					'aura_invalid_appointment',
+					__( 'One of the selected appointments is invalid.', 'aura-headless-api' ),
+					array( 'status' => 400 )
+				);
+			}
+
+			$booking               = new OsBookingModel();
+			$booking->service_id    = $service_id;
+			$booking->agent_id      = $agent_id;
+			$booking->location_id   = LATEPOINT_ANY_LOCATION;
+			$booking->start_date    = $start_date;
+			$booking->start_time    = $start_time;
+			$booking->duration      = $duration;
+			$booking->status        = $service->get_default_booking_status();
+			$capacity_min           = ! empty( $service->capacity_min ) ? (int) $service->capacity_min : 1;
+			$capacity_max           = ! empty( $service->capacity_max ) ? (int) $service->capacity_max : 1;
+			$total_attendees        = isset( $booking_payload['totalAttendees'] ) ? absint( $booking_payload['totalAttendees'] ) : 0;
+			$booking->total_attendees = $total_attendees > 0 ? max( $capacity_min, min( $total_attendees, $capacity_max ) ) : $capacity_min;
+			if ( class_exists( 'OsServiceExtrasHelper' ) ) {
+				$booking_service_extras = self::normalize_booking_service_extras( $service_id, $booking_payload['addonServices'] ?? array() );
+				if ( ! empty( $booking_service_extras ) ) {
+					$booking->service_extras = $booking_service_extras;
+				}
+			}
+			$booking->set_buffers();
+			$booking->calculate_end_date_and_time();
+
+			if ( ! $booking->is_bookable( array( 'skip_customer_check' => true ) ) ) {
+				return new WP_Error(
+					'aura_slot_unavailable',
+					__( 'One of the selected appointment times is no longer available.', 'aura-headless-api' ),
+					array( 'status' => 409 )
+				);
+			}
+
+			$booking_contexts[] = array(
+				'booking' => $booking,
+				'service' => $service,
+				'agent'   => $agent,
 			);
 		}
+
+		$current_context = end( $booking_contexts );
+		$service         = $current_context['service'];
+		$agent           = $current_context['agent'];
 
 		if ( $is_pay_later ) {
 			if ( ! class_exists( 'OsPaymentsHelper' ) || ! OsPaymentsHelper::is_local_payments_enabled() ) {
@@ -693,13 +756,15 @@ final class Aura_Headless_API {
 			return $customer_result;
 		}
 
-		$booking->customer_id = (int) $customer_result->id;
-		if ( ! $booking->is_bookable() ) {
-			return new WP_Error(
-				'aura_slot_unavailable',
-				__( 'This appointment time is no longer available.', 'aura-headless-api' ),
-				array( 'status' => 409 )
-			);
+		foreach ( $booking_contexts as $context ) {
+			$context['booking']->customer_id = (int) $customer_result->id;
+			if ( ! $context['booking']->is_bookable() ) {
+				return new WP_Error(
+					'aura_slot_unavailable',
+					__( 'One of the selected appointment times is no longer available.', 'aura-headless-api' ),
+					array( 'status' => 409 )
+				);
+			}
 		}
 
 		$cart                    = new OsCartModel();
@@ -707,10 +772,12 @@ final class Aura_Headless_API {
 		$cart->payment_portion   = LATEPOINT_PAYMENT_PORTION_FULL;
 		$cart->payment_method    = $is_pay_later ? LATEPOINT_PAYMENT_METHOD_LOCAL : 'woocommerce';
 		$cart->payment_processor = $is_pay_later ? 'latepoint' : 'woocommerce';
-		$cart_item               = new OsCartItemModel();
-		$cart_item->variant      = LATEPOINT_ITEM_VARIANT_BOOKING;
-		$cart_item->item_data    = wp_json_encode( $booking->generate_params_for_booking_form() );
-		$cart->add_item( $cart_item, false, true );
+		foreach ( $booking_contexts as $context ) {
+			$cart_item               = new OsCartItemModel();
+			$cart_item->variant      = LATEPOINT_ITEM_VARIANT_BOOKING;
+			$cart_item->item_data    = wp_json_encode( $context['booking']->generate_params_for_booking_form() );
+			$cart->add_item( $cart_item, false, true );
+		}
 
 		$order_intent = OsOrderIntentHelper::create_or_update_order_intent(
 			$cart,
@@ -740,8 +807,8 @@ final class Aura_Headless_API {
 
 			$order             = new OsOrderModel( $order_id );
 			$order_bookings    = $order->get_bookings_from_order_items( true );
-			$confirmed_booking = $order_bookings ? reset( $order_bookings ) : false;
-			if ( ! $confirmed_booking || $confirmed_booking->is_new_record() ) {
+			$confirmed_bookings = is_array( $order_bookings ) ? array_values( $order_bookings ) : array();
+			if ( empty( $confirmed_bookings ) ) {
 				foreach ( $order->get_items( true ) as $order_item ) {
 					if ( ! $order_item->is_booking() ) {
 						continue;
@@ -751,48 +818,37 @@ final class Aura_Headless_API {
 						continue;
 					}
 					$candidate_booking = OsBookingHelper::build_booking_model_from_item_data( $item_data );
-					if ( ! empty( $candidate_booking->service_id ) && ! empty( $candidate_booking->start_date ) && ! empty( $candidate_booking->start_time ) ) {
-						$confirmed_booking = $candidate_booking;
-						break;
+					if ( ! empty( $candidate_booking->service_id ) && ! empty( $candidate_booking->start_date ) && isset( $candidate_booking->start_time ) ) {
+						$confirmed_bookings[] = $candidate_booking;
 					}
 				}
 			}
-			if ( ! $confirmed_booking || empty( $confirmed_booking->service_id ) || empty( $confirmed_booking->start_date ) || empty( $confirmed_booking->start_time ) ) {
+			$confirmed_bookings = array_values(
+				array_filter(
+					$confirmed_bookings,
+					static function ( $booking ) {
+						return $booking && ! $booking->is_new_record() && ! empty( $booking->service_id ) && ! empty( $booking->start_date ) && isset( $booking->start_time );
+					}
+				)
+			);
+			if ( empty( $confirmed_bookings ) ) {
 				return new WP_Error(
 					'aura_confirmation_unavailable',
-					__( 'Your appointment was booked, but its confirmation could not be loaded.', 'aura-headless-api' ),
+					__( 'Your appointments were booked, but their confirmation could not be loaded.', 'aura-headless-api' ),
 					array( 'status' => 500 )
 				);
 			}
 
-			$ical_string            = OsBookingHelper::generate_ical_event_string( $confirmed_booking );
-			$calendar_qr            = class_exists( 'chillerlan\\QRCode\\QRCode' )
-				? ( new \chillerlan\QRCode\QRCode() )->render( $ical_string )
-				: '';
-			$addon_service_details  = self::get_booking_service_extra_details( $confirmed_booking );
-			$total_duration_minutes = (int) $confirmed_booking->duration + array_sum(
-				array_map( static fn( $item ) => (int) ( $item['durationMinutes'] ?? 0 ), $addon_service_details )
+			$booking_confirmations  = array_map( array( self::class, 'build_booking_confirmation' ), $confirmed_bookings );
+			$confirmation           = $booking_confirmations[0];
+			$confirmation['bookings'] = $booking_confirmations;
+			$confirmation['totalDurationMinutes'] = array_sum(
+				array_map( static fn( $booking ) => (int) $booking['totalDurationMinutes'], $booking_confirmations )
 			);
-			$response = array(
-				'confirmation' => array(
-					'code'               => (string) $confirmed_booking->booking_code,
-					'serviceName'        => (string) $service->name,
-					'primaryServiceName' => (string) $service->name,
-					'therapistName'      => (string) $agent->name_for_front,
-					'date'               => (string) $confirmed_booking->start_date,
-					'startMinutes'       => (int) $confirmed_booking->start_time,
-					'endMinutes'         => (int) $confirmed_booking->end_time,
-					'duration'           => (int) $confirmed_booking->duration,
-					'totalDurationMinutes' => $total_duration_minutes,
-					'status'             => (string) $confirmed_booking->status,
-					'paymentMethod'      => __( 'Pay Later', 'aura-headless-api' ),
-					'total'              => OsMoneyHelper::format_price( (float) $order->total ),
-					'totalPrice'         => (float) $order->total,
-					'addonServices'      => $addon_service_details,
-					'calendarQr'         => $calendar_qr,
-					'calendarDataUri'    => 'data:text/calendar;base64,' . base64_encode( $ical_string ),
-				),
-			);
+			$confirmation['paymentMethod'] = __( 'Pay Later', 'aura-headless-api' );
+			$confirmation['total'] = OsMoneyHelper::format_price( (float) $order->total );
+			$confirmation['totalPrice'] = (float) $order->total;
+			$response = array( 'confirmation' => $confirmation );
 			set_transient( $idempotency_cache_key, array( 'response' => $response ), 15 * MINUTE_IN_SECONDS );
 
 			return rest_ensure_response( $response );
@@ -1059,8 +1115,8 @@ final class Aura_Headless_API {
 
 		$order             = new OsOrderModel( (int) $order_intent->order_id );
 		$order_bookings    = $order->get_bookings_from_order_items( true );
-		$confirmed_booking = $order_bookings ? reset( $order_bookings ) : false;
-		if ( ! $confirmed_booking || $confirmed_booking->is_new_record() ) {
+		$confirmed_bookings = is_array( $order_bookings ) ? array_values( $order_bookings ) : array();
+		if ( empty( $confirmed_bookings ) ) {
 			foreach ( $order->get_items( true ) as $order_item ) {
 				if ( ! $order_item->is_booking() ) {
 					continue;
@@ -1070,50 +1126,68 @@ final class Aura_Headless_API {
 					continue;
 				}
 				$candidate_booking = OsBookingHelper::build_booking_model_from_item_data( $item_data );
-				if ( ! empty( $candidate_booking->service_id ) && ! empty( $candidate_booking->start_date ) && ! empty( $candidate_booking->start_time ) ) {
-					$confirmed_booking = $candidate_booking;
-					break;
+				if ( ! empty( $candidate_booking->service_id ) && ! empty( $candidate_booking->start_date ) && isset( $candidate_booking->start_time ) ) {
+					$confirmed_bookings[] = $candidate_booking;
 				}
 			}
 		}
 
-		if ( ! $confirmed_booking || empty( $confirmed_booking->service_id ) || empty( $confirmed_booking->start_date ) || empty( $confirmed_booking->start_time ) ) {
+		$confirmed_bookings = array_values(
+			array_filter(
+				$confirmed_bookings,
+				static function ( $booking ) {
+					return $booking && ! $booking->is_new_record() && ! empty( $booking->service_id ) && ! empty( $booking->start_date ) && isset( $booking->start_time );
+				}
+			)
+		);
+		if ( empty( $confirmed_bookings ) ) {
 			return new WP_REST_Response( array( 'status' => 'pending' ), 202 );
 		}
 
-		$service                  = new OsServiceModel( (int) $confirmed_booking->service_id );
-		$agent                    = new OsAgentModel( (int) $confirmed_booking->agent_id );
-		$ical_string              = OsBookingHelper::generate_ical_event_string( $confirmed_booking );
-		$calendar_qr              = class_exists( 'chillerlan\\QRCode\\QRCode' )
-			? ( new \chillerlan\QRCode\QRCode() )->render( $ical_string )
-			: '';
-		$addon_service_details    = self::get_booking_service_extra_details( $confirmed_booking );
-		$total_duration_minutes   = (int) $confirmed_booking->duration + array_sum(
-			array_map( static fn( $item ) => (int) ( $item['durationMinutes'] ?? 0 ), $addon_service_details )
+		$booking_confirmations = array_map( array( self::class, 'build_booking_confirmation' ), $confirmed_bookings );
+		$confirmation          = $booking_confirmations[0];
+		$total_duration_minutes = array_sum(
+			array_map( static fn( $booking ) => (int) $booking['totalDurationMinutes'], $booking_confirmations )
 		);
-		$total                     = (float) $wc_order->get_total();
-		$confirmation              = array(
-			'code'                 => (string) $confirmed_booking->booking_code,
-			'serviceName'          => (string) $service->name,
-			'primaryServiceName'   => (string) $service->name,
-			'therapistName'        => (string) $agent->name_for_front,
-			'date'                 => (string) $confirmed_booking->start_date,
-			'startMinutes'         => (int) $confirmed_booking->start_time,
-			'endMinutes'           => (int) $confirmed_booking->end_time,
-			'duration'             => (int) $confirmed_booking->duration,
-			'totalDurationMinutes' => $total_duration_minutes,
-			'status'               => (string) $confirmed_booking->status,
-			'paymentMethod'        => $wc_order->get_payment_method_title(),
-			'total'                => OsMoneyHelper::format_price( $total ),
-			'totalPrice'           => $total,
-			'addonServices'        => $addon_service_details,
-			'calendarQr'           => $calendar_qr,
-			'calendarDataUri'      => 'data:text/calendar;base64,' . base64_encode( $ical_string ),
-		);
+		$total = (float) $wc_order->get_total();
+		$confirmation['bookings'] = $booking_confirmations;
+		$confirmation['totalDurationMinutes'] = $total_duration_minutes;
+		$confirmation['paymentMethod'] = $wc_order->get_payment_method_title();
+		$confirmation['total'] = OsMoneyHelper::format_price( $total );
+		$confirmation['totalPrice'] = $total;
 
 		$response = rest_ensure_response( array( 'status' => 'paid', 'confirmation' => $confirmation ) );
 		$response->header( 'Cache-Control', 'no-store, max-age=0' );
 		return $response;
+	}
+
+	private static function build_booking_confirmation( $booking ) {
+		$service                 = new OsServiceModel( (int) $booking->service_id );
+		$agent                   = new OsAgentModel( (int) $booking->agent_id );
+		$ical_string             = OsBookingHelper::generate_ical_event_string( $booking );
+		$calendar_qr             = class_exists( 'chillerlan\\QRCode\\QRCode' )
+			? ( new \chillerlan\QRCode\QRCode() )->render( $ical_string )
+			: '';
+		$addon_service_details   = self::get_booking_service_extra_details( $booking );
+		$total_duration_minutes  = (int) $booking->duration + array_sum(
+			array_map( static fn( $item ) => (int) ( $item['durationMinutes'] ?? 0 ), $addon_service_details )
+		);
+
+		return array(
+			'code'                 => (string) $booking->booking_code,
+			'serviceName'          => (string) $service->name,
+			'primaryServiceName'   => (string) $service->name,
+			'therapistName'        => (string) $agent->name_for_front,
+			'date'                 => (string) $booking->start_date,
+			'startMinutes'         => (int) $booking->start_time,
+			'endMinutes'           => (int) $booking->end_time,
+			'duration'             => (int) $booking->duration,
+			'totalDurationMinutes' => $total_duration_minutes,
+			'status'               => (string) $booking->status,
+			'addonServices'        => $addon_service_details,
+			'calendarQr'           => $calendar_qr,
+			'calendarDataUri'       => 'data:text/calendar;base64,' . base64_encode( $ical_string ),
+		);
 	}
 
 	private static function build_confirmation_url( $return_url ) {
