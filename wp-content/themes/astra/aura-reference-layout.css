@@ -1,0 +1,45 @@
+body.home {
+	color: var(--ink);
+	background: var(--paper);
+	font-family: var(--sans);
+	line-height: normal;
+	overflow-x: hidden;
+}
+
+body.home #content,
+body.home .ast-container,
+body.home .site-main,
+body.home article,
+body.home .elementor,
+body.home .e-con,
+body.home .e-con-inner,
+body.home .elementor-widget-html {
+	width: 100%;
+	max-width: none;
+	margin-right: 0;
+	margin-left: 0;
+}
+
+body.home .content-area.primary {
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+body.home #primary {
+	margin-top: 0 !important;
+	margin-bottom: 0 !important;
+}
+
+body.home .ast-container {
+	padding-right: 0;
+	padding-left: 0;
+}
+
+body.home .entry-title,
+body.home .entry-header {
+	display: none;
+}
+
+body.home .display-heading {
+	margin-bottom: 2rem;
+}

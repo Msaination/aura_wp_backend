@@ -1,4 +1,3 @@
-
 <?php
 /**
  * WordPress User Page

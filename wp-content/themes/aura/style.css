@@ -1,0 +1,176 @@
+/*
+Theme Name: Aura
+Description: Minimal Astra child theme for Aura Spa and Elementor-built pages.
+Author: Aura Spa
+Version: 1.1.7
+Requires at least: 6.0
+Requires PHP: 7.4
+Template: astra
+Text Domain: aura
+*/
+
+html,
+body {
+	min-height: 100%;
+}
+
+body.page #content,
+body.page .ast-container,
+body.page .site-main,
+body.page #primary,
+body.page .aura-content,
+body.page .elementor,
+body.page .e-con,
+body.page .e-con-inner,
+body.page .elementor-widget-html {
+	width: 100%;
+	max-width: none;
+	margin-right: 0;
+	margin-left: 0;
+}
+
+body.page #content,
+body.page #primary {
+	margin-top: 0 !important;
+	margin-bottom: 0 !important;
+}
+
+body.page .ast-container {
+	padding-right: 0;
+	padding-left: 0;
+}
+
+body.page .entry-title,
+body.page .entry-header {
+	display: none;
+}
+
+.site-footer .footer-brand {
+	display: block;
+	width: clamp(7rem, 12vw, 9rem);
+	color: #fff;
+}
+
+.site-footer .footer-brand img {
+	display: block;
+	width: 100% !important;
+	height: auto;
+	filter: brightness(0) invert(1);
+}
+
+.aura-cancelled-order-home {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	min-height: 3.5rem;
+	margin-top: 0.75rem;
+	padding: 0.5rem 1.25rem;
+	border-radius: 0.75rem;
+	border: 1px solid #5f4037;
+	color: #fff;
+	background: #352d2a;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.aura-cancelled-order-home:hover,
+.aura-cancelled-order-home:focus-visible {
+	color: #fff;
+	background: #5f4037;
+}
+
+.aura-cancelled-order-home img {
+	display: block;
+	width: 3rem;
+	max-height: 2.5rem;
+	object-fit: contain;
+	filter: brightness(0) invert(1);
+}
+
+body.error404 {
+	background: #302a27;
+}
+
+body.error404 #content,
+body.error404 #content > .ast-container,
+body.error404 #primary {
+	width: 100%;
+	max-width: none;
+	margin: 0;
+	padding: 0;
+}
+
+.aura-not-found {
+	display: grid;
+	min-height: 75vh;
+	place-items: center;
+	color: #fffcf8;
+	background: radial-gradient(circle at 50% 20%, #493b37 0, #302a27 56%);
+	text-align: center;
+}
+
+.aura-not-found__inner {
+	width: min(100% - 2rem, 48rem);
+	padding: clamp(5rem, 10vw, 8rem) 0;
+}
+
+.aura-not-found__eyebrow {
+	margin: 0 0 1rem;
+	color: #cfb3a9;
+	font-family: 'DM Sans', sans-serif;
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.22em;
+	text-transform: uppercase;
+}
+
+.aura-not-found__number {
+	margin: 0;
+	color: #cfb3a9;
+	font-family: 'Italiana', Georgia, serif;
+	font-size: clamp(5rem, 16vw, 10rem);
+	line-height: 0.9;
+}
+
+.aura-not-found h1 {
+	margin: 1.5rem 0 1rem;
+	color: #fffcf8;
+	font-family: 'Italiana', Georgia, serif;
+	font-size: clamp(2.8rem, 7vw, 5rem);
+	font-weight: 400;
+	line-height: 1.05;
+}
+
+.aura-not-found__message {
+	max-width: 34rem;
+	margin: 0 auto 2rem;
+	color: rgba(255, 252, 248, 0.75);
+	font-family: 'DM Sans', sans-serif;
+	font-size: 1rem;
+	line-height: 1.75;
+}
+
+.aura-not-found__button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 3.25rem;
+	padding: 0.8rem 1.5rem;
+	color: #302a27;
+	background: #fffcf8;
+	font-family: 'DM Sans', sans-serif;
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-decoration: none;
+	text-transform: uppercase;
+	transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.aura-not-found__button:hover,
+.aura-not-found__button:focus-visible {
+	color: #302a27;
+	background: #e4d8cb;
+	transform: translateY(-2px);
+}

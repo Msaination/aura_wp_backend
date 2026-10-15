@@ -5,17 +5,10 @@
 
 $theme_assets = get_stylesheet_directory_uri() . '/assets';
 ?>
-<!doctype html>
-<html <?php language_attributes(); ?>>
-<head>
-    <meta charset="<?php bloginfo('charset'); ?>">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <?php wp_head(); ?>
-</head>
-<body <?php body_class('spa-shell'); ?>>
-<?php wp_body_open(); ?>
-
+<?php get_header(); ?>
 <div class="spa-shell">
+
+<?php if (!function_exists('elementor_theme_do_location') || !elementor_theme_do_location('header')) : ?>
     <header class="spa-header">
         <div class="spa-container spa-header-inner">
             <a href="<?php echo esc_url(home_url('/')); ?>" class="spa-brand" aria-label="Aura Spa home">
@@ -23,19 +16,22 @@ $theme_assets = get_stylesheet_directory_uri() . '/assets';
             </a>
 
             <nav class="spa-nav" aria-label="Main navigation">
-                <ul>
-                    <li><a href="#">Home</a></li>
-                    <li><a href="#gift-vouchers">Shop</a></li>
-                    <li><a href="/book">Book Appointment</a></li>
-                    <li><a href="#gift-vouchers">Gift Cards</a></li>
-                    <li><a href="#about">About</a></li>
-                    <li><a href="#contact">Contact</a></li>
-                </ul>
+                <?php
+                wp_nav_menu(
+                    array(
+                        'theme_location' => 'primary',
+                        'menu_class'     => 'spa-nav-ul',
+                        'container'      => false,
+                        'fallback_cb'    => 'aura_home_template_menu_fallback',
+                    )
+                );
+                ?>
             </nav>
 
             <a href="/book" class="spa-button spa-button-primary spa-button-small">Book Appointment</a>
         </div>
     </header>
+<?php endif; ?>
 
     <main>
         <section class="spa-hero" style="background-image: url('<?php echo esc_url($theme_assets . '/images/AuraBG.jpg'); ?>');">
@@ -347,6 +343,7 @@ $theme_assets = get_stylesheet_directory_uri() . '/assets';
         </section>
     </main>
 
+<?php if (!function_exists('elementor_theme_do_location') || !elementor_theme_do_location('footer')) : ?>
     <footer id="contact" class="spa-footer">
         <div class="spa-container spa-footer-grid">
             <div class="spa-footer-brand-block">
@@ -365,14 +362,19 @@ $theme_assets = get_stylesheet_directory_uri() . '/assets';
                 </a>
             </div>
 
-            <div>
-                <h3>Quick Links</h3>
-                <ul>
-                    <li><a href="#">Home</a></li>
-                    <li><a href="#gift-vouchers">Shop</a></li>
-                    <li><a href="/book">Book Appointment</a></li>
-                    <li><a href="#about">About</a></li>
-                </ul>
+            <div class="spa-footer-nav">
+                <?php
+                // Render the single Primary Menu in the footer via wp_nav_menu.
+                // This keeps menu management centralized in one place (Appearance → Menus).
+                wp_nav_menu(
+                    array(
+                        'theme_location' => 'primary',
+                        'menu_class'     => 'spa-footer-nav-ul',
+                        'container'      => false,
+                        'fallback_cb'    => 'aura_home_template_menu_fallback',
+                    )
+                );
+                ?>
             </div>
 
             <div>
@@ -416,8 +418,7 @@ $theme_assets = get_stylesheet_directory_uri() . '/assets';
             <path d="M20.25 11.98A8.25 8.25 0 0 1 4.93 16.9L4 20l3.12-1.02A8.25 8.25 0 1 1 20.25 11.98Zm-5.4 1.66c-.16-.08-1.1-.54-1.27-.6-.17-.07-.3-.08-.43.08-.12.15-.48.6-.59.72-.11.12-.22.13-.4.05-.18-.08-.76-.28-1.44-.9-.53-.47-.9-1.05-.99-1.22-.1-.17-.01-.27.08-.35.08-.08.17-.2.25-.3.08-.1.11-.17.17-.28.06-.12.03-.22-.02-.3-.05-.08-.43-1.04-.6-1.42-.15-.35-.31-.3-.43-.3h-.37c-.12 0-.32.05-.49.24-.17.18-.64.62-.64 1.52 0 .9.66 1.76.75 1.88.09.12 1.28 1.96 3.12 2.68.44.19.78.3 1.05.39.45.14.85.12 1.17.07.35-.05 1.1-.45 1.25-.88.16-.44.16-.81.11-.89-.05-.08-.18-.13-.34-.23Z" fill="currentColor"/>
         </svg>
     </a>
+<?php endif; ?>
 </div>
 
-<?php wp_footer(); ?>
-</body>
-</html>
+<?php get_footer(); ?>

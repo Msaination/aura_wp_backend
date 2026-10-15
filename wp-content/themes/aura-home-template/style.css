@@ -138,15 +138,20 @@ ol {
     margin-bottom: 0.75rem;
 }
 
-.spa-nav ul {
+.spa-nav ul,
+.spa-nav-ul {
     display: flex;
     justify-content: center;
     align-items: center;
     gap: clamp(0.8rem, 1.6vw, 2rem);
     flex-wrap: wrap;
+    list-style: none;
+    margin: 0;
+    padding: 0;
 }
 
-.spa-nav a {
+.spa-nav a,
+.spa-nav-ul a {
     position: relative;
     color: rgba(42, 36, 31, 0.84);
     font-size: 0.75rem;
@@ -154,7 +159,8 @@ ol {
     text-transform: uppercase;
 }
 
-.spa-nav a::after {
+.spa-nav a::after,
+.spa-nav-ul a::after {
     content: "";
     position: absolute;
     left: 0;
@@ -168,7 +174,9 @@ ol {
 }
 
 .spa-nav a:hover::after,
-.spa-nav a:focus-visible::after {
+.spa-nav a:focus-visible::after,
+.spa-nav-ul a:hover::after,
+.spa-nav-ul a:focus-visible::after {
     transform: scaleX(1);
 }
 

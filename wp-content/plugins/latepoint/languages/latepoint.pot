@@ -3743,7 +3743,7 @@ msgid "Appointment with %1$s for %2$s"
 msgstr ""
 
 #: lib/helpers/booking_helper.php:686
-msgid "Bundle & Save"
+msgid "Packages"
 msgstr ""
 
 #: lib/helpers/booking_helper.php:792
