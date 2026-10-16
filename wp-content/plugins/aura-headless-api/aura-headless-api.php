@@ -34,6 +34,26 @@ final class Aura_Headless_API {
 
 		register_rest_route(
 			self::REST_NAMESPACE,
+			'/bundles',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'get_bundles' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
+			'/payment-methods',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'get_payment_methods' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
 			'/services/(?P<service_id>\d+)/therapists',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
@@ -206,6 +226,46 @@ final class Aura_Headless_API {
 			)
 		);
 		$response->header( 'Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600' );
+
+		return $response;
+	}
+
+	public static function get_bundles() {
+		if (
+			! class_exists( 'OsBundleModel' ) ||
+			! class_exists( 'OsServiceModel' ) ||
+			! defined( 'LATEPOINT_ITEM_VARIANT_BUNDLE' )
+		) {
+			return new WP_Error(
+				'aura_latepoint_unavailable',
+				__( 'The booking service is temporarily unavailable.', 'aura-headless-api' ),
+				array( 'status' => 503 )
+			);
+		}
+
+		$bundles = ( new OsBundleModel() )
+			->should_be_active()
+			->should_not_be_hidden()
+			->order_by( 'order_number ASC, name ASC' )
+			->get_results_as_models();
+		$bundles = is_array( $bundles ) ? $bundles : array();
+		$response = rest_ensure_response(
+			array(
+				'bundles' => array_map( array( self::class, 'map_bundle' ), $bundles ),
+				'total'   => count( $bundles ),
+			)
+		);
+		$response->header( 'Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600' );
+
+		return $response;
+	}
+
+	public static function get_payment_methods( $request ) {
+		$include_pay_later = 'bundle' !== sanitize_key( $request->get_param( 'type' ) );
+		$response = rest_ensure_response(
+			array( 'paymentMethods' => self::get_available_payment_methods( $include_pay_later ) )
+		);
+		$response->header( 'Cache-Control', 'no-store, max-age=0' );
 
 		return $response;
 	}
@@ -483,8 +543,30 @@ final class Aura_Headless_API {
 		$booking->service_id = $service_id;
 		$booking->duration   = $duration;
 		$total               = (float) OsBookingHelper::calculate_full_amount_for_booking( $booking );
-		$payment_methods     = array();
-		if ( class_exists( 'OsPaymentsHelper' ) && OsPaymentsHelper::is_local_payments_enabled() ) {
+		$payment_methods = self::get_available_payment_methods();
+
+		$response = rest_ensure_response(
+			array(
+				'service' => array(
+					'id'       => (int) $service->id,
+					'name'     => (string) $service->name,
+					'duration' => $duration,
+				),
+				'total' => array(
+					'amount'    => $total,
+					'formatted' => OsMoneyHelper::format_price( $total ),
+				),
+				'paymentMethods' => $payment_methods,
+			)
+		);
+		$response->header( 'Cache-Control', 'no-store, max-age=0' );
+
+		return $response;
+	}
+
+	private static function get_available_payment_methods( $include_pay_later = true ) {
+		$payment_methods = array();
+		if ( $include_pay_later && class_exists( 'OsPaymentsHelper' ) && OsPaymentsHelper::is_local_payments_enabled() ) {
 			$payment_methods[] = array(
 				'id'          => LATEPOINT_PAYMENT_METHOD_LOCAL,
 				'name'        => __( 'Pay Later', 'aura-headless-api' ),
@@ -511,23 +593,7 @@ final class Aura_Headless_API {
 			}
 		}
 
-		$response = rest_ensure_response(
-			array(
-				'service' => array(
-					'id'       => (int) $service->id,
-					'name'     => (string) $service->name,
-					'duration' => $duration,
-				),
-				'total' => array(
-					'amount'    => $total,
-					'formatted' => OsMoneyHelper::format_price( $total ),
-				),
-				'paymentMethods' => $payment_methods,
-			)
-		);
-		$response->header( 'Cache-Control', 'no-store, max-age=0' );
-
-		return $response;
+		return $payment_methods;
 	}
 
 	public static function create_checkout_intent( $request ) {
@@ -588,14 +654,61 @@ final class Aura_Headless_API {
 		$gateway_id   = sanitize_key( $payload['paymentMethod'] ?? '' );
 		$is_pay_later = 'local' === $gateway_id;
 		$customer_data = is_array( $payload['customer'] ?? null ) ? $payload['customer'] : array();
+		$bundle_payloads = $payload['bundles'] ?? array();
+		if ( ! is_array( $bundle_payloads ) ) {
+			return new WP_Error(
+				'aura_invalid_bundle',
+				__( 'The selected package is invalid.', 'aura-headless-api' ),
+				array( 'status' => 400 )
+			);
+		}
+		if (
+			! empty( $bundle_payloads ) &&
+			( ! class_exists( 'OsBundleModel' ) || ! defined( 'LATEPOINT_ITEM_VARIANT_BUNDLE' ) )
+		) {
+			return new WP_Error(
+				'aura_bundles_unavailable',
+				__( 'Package purchases are temporarily unavailable.', 'aura-headless-api' ),
+				array( 'status' => 503 )
+			);
+		}
+
 		$booking_payloads = $payload['appointments'] ?? array();
-		if ( ! is_array( $booking_payloads ) || empty( $booking_payloads ) ) {
+		if ( ! is_array( $booking_payloads ) ) {
+			return new WP_Error(
+				'aura_invalid_appointment',
+				__( 'The selected appointment is invalid.', 'aura-headless-api' ),
+				array( 'status' => 400 )
+			);
+		}
+		if ( empty( $booking_payloads ) && empty( $bundle_payloads ) && ! empty( $payload['serviceId'] ) ) {
 			$booking_payloads = array( $payload );
 		}
-		if ( count( $booking_payloads ) > 10 ) {
+		if ( empty( $booking_payloads ) && empty( $bundle_payloads ) ) {
 			return new WP_Error(
-				'aura_too_many_bookings',
-				__( 'An order can contain up to 10 appointments.', 'aura-headless-api' ),
+				'aura_empty_checkout',
+				__( 'Choose an appointment or package before checkout.', 'aura-headless-api' ),
+				array( 'status' => 400 )
+			);
+		}
+		if ( ! empty( $booking_payloads ) && ! empty( $bundle_payloads ) ) {
+			return new WP_Error(
+				'aura_mixed_checkout',
+				__( 'Appointments and packages must be checked out separately.', 'aura-headless-api' ),
+				array( 'status' => 400 )
+			);
+		}
+		if ( count( $booking_payloads ) > 10 || count( $bundle_payloads ) > 10 ) {
+			return new WP_Error(
+				'aura_too_many_items',
+				__( 'An order can contain up to 10 items.', 'aura-headless-api' ),
+				array( 'status' => 400 )
+			);
+		}
+		if ( ! empty( $bundle_payloads ) && $is_pay_later ) {
+			return new WP_Error(
+				'aura_package_payment_required',
+				__( 'Packages must be paid online at purchase.', 'aura-headless-api' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -692,9 +805,31 @@ final class Aura_Headless_API {
 			);
 		}
 
-		$current_context = end( $booking_contexts );
-		$service         = $current_context['service'];
-		$agent           = $current_context['agent'];
+		$bundle_models = array();
+		foreach ( $bundle_payloads as $bundle_payload ) {
+			if ( ! is_array( $bundle_payload ) ) {
+				return new WP_Error(
+					'aura_invalid_bundle',
+					__( 'The selected package is invalid.', 'aura-headless-api' ),
+					array( 'status' => 400 )
+				);
+			}
+
+			$bundle = new OsBundleModel( absint( $bundle_payload['bundleId'] ?? 0 ) );
+			if ( ! $bundle->exists() || ! $bundle->is_active() || $bundle->is_hidden() || empty( $bundle->get_services() ) ) {
+				return new WP_Error(
+					'aura_bundle_not_found',
+					__( 'One of the requested packages is unavailable.', 'aura-headless-api' ),
+					array( 'status' => 404 )
+				);
+			}
+
+			$bundle_models[] = $bundle;
+		}
+
+		$current_context = empty( $booking_contexts ) ? null : end( $booking_contexts );
+		$service         = $current_context['service'] ?? null;
+		$agent           = $current_context['agent'] ?? null;
 
 		if ( $is_pay_later ) {
 			if ( ! class_exists( 'OsPaymentsHelper' ) || ! OsPaymentsHelper::is_local_payments_enabled() ) {
@@ -722,33 +857,35 @@ final class Aura_Headless_API {
 			}
 		}
 
-		$booking               = new OsBookingModel();
-		$booking->service_id    = $service_id;
-		$booking->agent_id      = $agent_id;
-		$booking->location_id   = LATEPOINT_ANY_LOCATION;
-		$booking->start_date    = $start_date;
-		$booking->start_time    = $start_time;
-		$booking->duration      = $duration;
-		$booking->status        = $service->get_default_booking_status();
-		$capacity_min           = ! empty( $service->capacity_min ) ? (int) $service->capacity_min : 1;
-		$capacity_max           = ! empty( $service->capacity_max ) ? (int) $service->capacity_max : 1;
-		$total_attendees        = isset( $payload['totalAttendees'] ) ? absint( $payload['totalAttendees'] ) : 0;
-		$booking->total_attendees = $total_attendees > 0 ? max( $capacity_min, min( $total_attendees, $capacity_max ) ) : $capacity_min;
-		if ( class_exists( 'OsServiceExtrasHelper' ) ) {
-			$booking_service_extras = self::normalize_booking_service_extras( $service_id, $payload['addonServices'] ?? [] );
-			if ( ! empty( $booking_service_extras ) ) {
-				$booking->service_extras = $booking_service_extras;
+		if ( $current_context ) {
+			$booking               = new OsBookingModel();
+			$booking->service_id    = $service_id;
+			$booking->agent_id      = $agent_id;
+			$booking->location_id   = LATEPOINT_ANY_LOCATION;
+			$booking->start_date    = $start_date;
+			$booking->start_time    = $start_time;
+			$booking->duration      = $duration;
+			$booking->status        = $service->get_default_booking_status();
+			$capacity_min           = ! empty( $service->capacity_min ) ? (int) $service->capacity_min : 1;
+			$capacity_max           = ! empty( $service->capacity_max ) ? (int) $service->capacity_max : 1;
+			$total_attendees        = isset( $payload['totalAttendees'] ) ? absint( $payload['totalAttendees'] ) : 0;
+			$booking->total_attendees = $total_attendees > 0 ? max( $capacity_min, min( $total_attendees, $capacity_max ) ) : $capacity_min;
+			if ( class_exists( 'OsServiceExtrasHelper' ) ) {
+				$booking_service_extras = self::normalize_booking_service_extras( $service_id, $payload['addonServices'] ?? array() );
+				if ( ! empty( $booking_service_extras ) ) {
+					$booking->service_extras = $booking_service_extras;
+				}
 			}
-		}
-		$booking->set_buffers();
-		$booking->calculate_end_date_and_time();
+			$booking->set_buffers();
+			$booking->calculate_end_date_and_time();
 
-		if ( ! $booking->is_bookable( array( 'skip_customer_check' => true ) ) ) {
-			return new WP_Error(
-				'aura_slot_unavailable',
-				__( 'This appointment time is no longer available.', 'aura-headless-api' ),
-				array( 'status' => 409 )
-			);
+			if ( ! $booking->is_bookable( array( 'skip_customer_check' => true ) ) ) {
+				return new WP_Error(
+					'aura_slot_unavailable',
+					__( 'This appointment time is no longer available.', 'aura-headless-api' ),
+					array( 'status' => 409 )
+				);
+			}
 		}
 
 		$customer_result = self::find_or_create_customer( $customer_data );
@@ -776,6 +913,12 @@ final class Aura_Headless_API {
 			$cart_item               = new OsCartItemModel();
 			$cart_item->variant      = LATEPOINT_ITEM_VARIANT_BOOKING;
 			$cart_item->item_data    = wp_json_encode( $context['booking']->generate_params_for_booking_form() );
+			$cart->add_item( $cart_item, false, true );
+		}
+		foreach ( $bundle_models as $bundle ) {
+			$cart_item               = new OsCartItemModel();
+			$cart_item->variant      = LATEPOINT_ITEM_VARIANT_BUNDLE;
+			$cart_item->item_data    = wp_json_encode( $bundle->generate_params_for_booking_form() );
 			$cart->add_item( $cart_item, false, true );
 		}
 
@@ -808,6 +951,19 @@ final class Aura_Headless_API {
 			$order             = new OsOrderModel( $order_id );
 			$order_bookings    = $order->get_bookings_from_order_items( true );
 			$confirmed_bookings = is_array( $order_bookings ) ? array_values( $order_bookings ) : array();
+			$order_bundles = $order->get_bundles_from_order_items( true );
+			if ( empty( $confirmed_bookings ) && ! empty( $order_bundles ) ) {
+				$response = array(
+					'packageConfirmation' => self::build_package_confirmation(
+						$order,
+						__( 'Pay Later', 'aura-headless-api' ),
+						(float) $order->total
+					),
+				);
+				set_transient( $idempotency_cache_key, array( 'response' => $response ), 15 * MINUTE_IN_SECONDS );
+
+				return rest_ensure_response( $response );
+			}
 			if ( empty( $confirmed_bookings ) ) {
 				foreach ( $order->get_items( true ) as $order_item ) {
 					if ( ! $order_item->is_booking() ) {
@@ -1141,6 +1297,23 @@ final class Aura_Headless_API {
 			)
 		);
 		if ( empty( $confirmed_bookings ) ) {
+			$order_bundles = $order->get_bundles_from_order_items( true );
+			if ( ! empty( $order_bundles ) ) {
+				$package_confirmation = self::build_package_confirmation(
+					$order,
+					$wc_order->get_payment_method_title(),
+					(float) $wc_order->get_total()
+				);
+				$response = rest_ensure_response(
+					array(
+						'status'              => 'paid',
+						'packageConfirmation' => $package_confirmation,
+					)
+				);
+				$response->header( 'Cache-Control', 'no-store, max-age=0' );
+				return $response;
+			}
+
 			return new WP_REST_Response( array( 'status' => 'pending' ), 202 );
 		}
 
@@ -1190,6 +1363,39 @@ final class Aura_Headless_API {
 		);
 	}
 
+	private static function build_package_confirmation( $order, $payment_method, $total ) {
+		$bundles = $order->get_bundles_from_order_items( true );
+		$packages = array();
+
+		foreach ( $bundles as $bundle ) {
+			$included_services = array_map(
+				static function ( $service ) {
+					return array(
+						'name'            => (string) $service->name,
+						'quantity'        => (int) ( $service->join_attributes['quantity'] ?? 1 ),
+						'durationMinutes' => (int) ( $service->join_attributes['duration'] ?? $service->duration ),
+					);
+				},
+				$bundle->get_services()
+			);
+
+			$packages[] = array(
+				'id'               => (int) $bundle->id,
+				'name'             => (string) $bundle->name,
+				'includedServices' => $included_services,
+			);
+		}
+
+		return array(
+			'type'          => 'package',
+			'code'          => (string) $order->confirmation_code,
+			'packages'      => $packages,
+			'paymentMethod' => (string) $payment_method,
+			'total'         => OsMoneyHelper::format_price( $total ),
+			'totalPrice'    => (float) $total,
+		);
+	}
+
 	private static function build_confirmation_url( $return_url ) {
 		$parts = wp_parse_url( esc_url_raw( $return_url ) );
 		if ( empty( $parts['scheme'] ) || empty( $parts['host'] ) || ! in_array( $parts['scheme'], array( 'http', 'https' ), true ) ) {
@@ -1200,7 +1406,11 @@ final class Aura_Headless_API {
 		if ( ! empty( $parts['port'] ) ) {
 			$confirmation_url .= ':' . (int) $parts['port'];
 		}
-		$confirmation_url .= '/book/confirmation';
+		$confirmation_path = '/book/confirmation';
+		if ( '/book/package/confirmation' === ( $parts['path'] ?? '' ) ) {
+			$confirmation_path = '/book/package/confirmation';
+		}
+		$confirmation_url .= $confirmation_path;
 
 		return wp_validate_redirect( $confirmation_url, '' );
 	}
@@ -1379,6 +1589,32 @@ final class Aura_Headless_API {
 			),
 			'durations'        => $durations,
 			'extras'           => self::map_service_extras( $service ),
+		);
+	}
+
+	private static function map_bundle( $bundle ) {
+		$included_services = array_map(
+			static function ( $service ) {
+				return array(
+					'id'              => (int) $service->id,
+					'name'            => (string) $service->name,
+					'quantity'        => (int) ( $service->join_attributes['quantity'] ?? 1 ),
+					'durationMinutes' => (int) ( $service->join_attributes['duration'] ?? $service->duration ),
+				);
+			},
+			$bundle->get_services()
+		);
+		$amount = (float) $bundle->full_amount_to_charge();
+
+		return array(
+			'id'               => (int) $bundle->id,
+			'name'             => (string) $bundle->name,
+			'shortDescription' => wp_strip_all_tags( (string) $bundle->short_description ),
+			'price'            => array(
+				'amount'    => $amount,
+				'formatted' => OsMoneyHelper::format_price( $amount ),
+			),
+			'includedServices' => $included_services,
 		);
 	}
 
