@@ -234,6 +234,174 @@ class OsPaymentsWoocommerceHelper {
         }
     }
 
+    /**
+     * Get the default payment gateway for bypassing checkout.
+     *
+     * @return string
+     */
+    public static function get_default_payment_gateway() {
+        $default = get_option( 'woocommerce_default_gateway', 'payfast' );
+        $gateways = WC()->payment_gateways()->payment_gateways();
+
+        if ( isset( $gateways[ $default ] ) && $gateways[ $default ]->enabled === 'yes' ) {
+            return $default;
+        }
+
+        // Fallback: first enabled payment gateway (prefer PayFast)
+        foreach ( $gateways as $id => $gateway ) {
+            if ( $gateway->enabled === 'yes' && $id !== 'cod' && $id !== 'cheque' ) {
+                return $id;
+            }
+        }
+
+        return 'payfast';
+    }
+
+    /**
+     * Bypass WooCommerce checkout page and redirect directly to payment gateway.
+     *
+     * Creates a WooCommerce order from the cart with pre-filled customer
+     * data from LatePoint, then processes payment via the configured gateway.
+     *
+     * @param OsTransactionIntentModel $transaction_intent The LatePoint transaction intent.
+     * @return string Payment gateway redirect URL.
+     * @throws Exception If order creation or payment processing fails.
+     */
+    public static function bypass_checkout_and_redirect_to_payment( $transaction_intent ) {
+        if ( ! WC()->cart || WC()->cart->get_cart_contents_count() === 0 ) {
+            throw new Exception( esc_html__( 'Cart is empty, cannot process payment.', 'latepoint-payments-woocommerce' ) );
+        }
+
+        // Get LatePoint customer data directly for billing
+        $latepoint_customer = new OsCustomerModel( $transaction_intent->customer_id );
+
+        // Use WordPress user ID for the order (0 = guest). LatePoint customer_id is NOT a WP user ID.
+        $wp_customer_id = get_current_user_id() ?: 0;
+
+        // Create the order
+        $order = wc_create_order( array(
+            'customer_id' => $wp_customer_id,
+            'customer_note' => sprintf(
+                esc_html__( 'Order created from LatePoint transaction intent %s.', 'latepoint-payments-woocommerce' ),
+                $transaction_intent->intent_key
+            ),
+            'date_created' => current_time( 'mysql', 1 ),
+        ) );
+
+        if ( ! $order ) {
+            throw new Exception( esc_html__( 'Failed to create WooCommerce order.', 'latepoint-payments-woocommerce' ) );
+        }
+
+        // Add cart items to the order, using the LatePoint custom prices
+        foreach ( WC()->cart->get_cart() as $cart_item ) {
+            $product = wc_get_product( $cart_item['product_id'] );
+            if ( ! $product ) {
+                continue;
+            }
+
+            // Get custom price from cart item data or use product price
+            $price = $product->get_price();
+            $cart_item_keys = array_keys( $cart_item );
+            $custom_price = isset( $cart_item['lp_custom_price'] ) ? $cart_item['lp_custom_price']
+                          : ( isset( $cart_item['data'] ) && $cart_item['data'] instanceof WC_Product ? $cart_item['data']->get_meta( 'lp_custom_price', true ) : null );
+            if ( ! empty( $custom_price ) ) {
+                $price = (float) $custom_price;
+            }
+
+            $quantity = $cart_item['quantity'];
+            $line_total = $price * $quantity;
+
+            $order_item = new WC_Order_Item_Product();
+            $order_item->set_product( $product );
+            $order_item->set_quantity( $quantity );
+            $order_item->set_subtotal( $line_total );
+            $order_item->set_total( $line_total );
+            $order->add_item( $order_item );
+        }
+
+        // Set billing address from LatePoint customer data
+        $order->set_billing_first_name( sanitize_text_field( $latepoint_customer->first_name ) );
+        $order->set_billing_last_name( sanitize_text_field( $latepoint_customer->last_name ) );
+        $order->set_billing_email( sanitize_email( $latepoint_customer->email ) );
+        $order->set_billing_phone( sanitize_text_field( $latepoint_customer->phone ) );
+
+        // Use base location for country/state (OsCustomerModel doesn't have address fields)
+        $base_location = wc_get_base_location();
+        $billing_country = $base_location['country'] ?? '';
+        $billing_state   = $base_location['state'] ?? '';
+
+        $order->set_billing_country( $billing_country );
+        $order->set_billing_state( $billing_state );
+
+        // Copy billing to shipping
+        $order->set_shipping_first_name( sanitize_text_field( $latepoint_customer->first_name ) );
+        $order->set_shipping_last_name( sanitize_text_field( $latepoint_customer->last_name ) );
+        $order->set_shipping_country( $billing_country );
+        $order->set_shipping_state( $billing_state );
+
+        // Calculate line item totals and ensure they match LatePoint charges
+        $line_total_sum = 0;
+        foreach ( $order->get_items() as $item ) {
+            if ( $item instanceof WC_Order_Item_Product ) {
+                $line_total_sum += (float) $item->get_total();
+            }
+        }
+
+        // Get the LatePoint transaction charge amount
+        $transaction_total = (float) OsPaymentsWoocommerceHelper::convert_charge_amount( $transaction_intent->charge_amount );
+
+        if ( $transaction_total > 0 && $line_total_sum > 0 && abs( $transaction_total - $line_total_sum ) > 0.01 ) {
+            // Scale line items to match the LatePoint total, then set order total directly
+            // (skip calculate_totals() which would recalculate from product prices)
+            $ratio = $transaction_total / $line_total_sum;
+            foreach ( $order->get_items() as $item ) {
+                if ( $item instanceof WC_Order_Item_Product ) {
+                    $item->set_subtotal( round( $item->get_subtotal() * $ratio, 2 ) );
+                    $item->set_total( round( $item->get_total() * $ratio, 2 ) );
+                    $item->save();
+                }
+            }
+            $order->set_total( $transaction_total );
+        } else {
+            // No LatePoint total available or amounts match — calculate normally
+            $order->calculate_totals();
+        }
+
+        // Store the LatePoint transaction intent key on the order
+        $order->update_meta_data( '_latepoint_transaction_intent_key', $transaction_intent->intent_key );
+
+        // Set the payment gateway
+        $payment_method = self::get_default_payment_gateway();
+        $order->set_payment_method( $payment_method );
+
+        // Save the order
+        $order_id = $order->save();
+
+        // Update the transaction intent with the WC order ID
+        $transaction_intent->update_attributes( array(
+            'token'  => $order_id,
+            'method' => self::$processor_name,
+        ) );
+
+        // Process payment via the gateway
+        $gateways = WC()->payment_gateways()->payment_gateways();
+        if ( isset( $gateways[ $payment_method ] ) && method_exists( $gateways[ $payment_method ], 'process_payment' ) ) {
+            $result = $gateways[ $payment_method ]->process_payment( $order_id );
+
+            if ( isset( $result['result'] ) && $result['result'] === 'success' && isset( $result['redirect'] ) ) {
+                return $result['redirect'];
+            }
+        }
+
+        // Fallback: redirect to order payment page
+        $order = wc_get_order( $order_id );
+        if ( $order ) {
+            return $order->get_checkout_payment_url( true );
+        }
+
+        throw new Exception( esc_html__( 'Failed to process payment.', 'latepoint-payments-woocommerce' ) );
+    }
+
 	public static function convert_order( $wc_order, $create_transaction_if_needed = false ) {
 		if ( !$wc_order || !$wc_order->is_paid() ) {
 			return;

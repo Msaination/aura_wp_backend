@@ -7,7 +7,7 @@ namespace LatePoint\Misc;
 
 class Role {
 	public ?string $user_type = null;
-	public ?string $name;
+	public ?string $name = null;
 
 	public ?string $wp_capability = null;
 	public ?string $wp_role       = null;

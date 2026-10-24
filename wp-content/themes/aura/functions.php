@@ -128,6 +128,128 @@ function aura_append_cancelled_order_home_to_cart_block( $block_content, $block 
 add_filter( 'render_block', 'aura_append_cancelled_order_home_to_cart_block', 20, 2 );
 
 /**
+ * Show WordPress admin bar (with WP logo) on LatePoint admin pages.
+ *
+ * LatePoint hides the WordPress admin bar via its CSS
+ * (.latepoint-admin #wpadminbar { display: none; }), and WordPress
+ * itself hides the wp-logo node in the admin area. We override both
+ * so all backend users — not just administrators — can navigate back
+ * to the WordPress dashboard.
+ */
+function aura_show_admin_bar_on_latepoint() {
+	// Only on the LatePoint admin screen.
+	if ( ! is_admin() || ! isset( $_GET['page'] ) || $_GET['page'] !== 'latepoint' ) {
+		return;
+	}
+
+	echo '<style id="aura-latepoint-admin-bar">'
+		. '#wpadminbar{display:block!important}'
+		. '#wp-admin-bar-top-secondary{display:block!important}'
+		. '#wp-admin-bar-wp-logo,#wp-admin-bar-site-name,#wp-admin-bar-comments,#wp-admin-bar-new-content,#wp-admin-bar-my-sites,#wp-admin-bar-search{display:none!important}'
+		. 'body.latepoint-admin{margin-top:0!important}'
+		. '</style>';
+}
+add_action( 'admin_head', 'aura_show_admin_bar_on_latepoint', 9999 );
+/**
+ * Apply 50% deposit with rounding for all LatePoint services.
+ *
+ * - Defaults payment portion to 'deposit' when not set
+ * - Calculates 50% of the charge amount
+ * - Rounds up to the nearest multiple of 10 (e.g. R293.75 → R300.00)
+ *
+ * @param float $charge_amount The charge amount.
+ * @param OsCartModel $cart The LatePoint cart object.
+ * @return float The deposit amount, rounded up.
+ */
+
+/**
+ * Set default 50% deposit for LatePoint services that don't have one configured.
+ * This makes the deposit amount available in the Edit Service form for all services.
+ */
+function aura_latepoint_set_default_deposits() {
+    // Only run in admin for administrators
+    if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+        return;
+    }
+
+    // Only run on plugins_loaded (ensures LatePoint is loaded)
+    if ( ! did_action( 'plugins_loaded' ) ) {
+        return;
+    }
+
+    // Only run when LatePoint is the current admin page
+    $screen = get_current_screen();
+    if ( ! $screen || ( strpos( $screen->id, 'latepoint' ) === false && $screen->id !== 'toplevel_page_latepoint' ) ) {
+        return;
+    }
+
+    // Check if we've already set defaults
+    if ( get_transient( 'aura_latepoint_deposits_set' ) ) {
+        return;
+    }
+
+    global $wpdb;
+    $table = $wpdb->prefix . 'latepoint_services';
+
+    // Get services without a deposit and calculate 50% of their price
+    $services = $wpdb->get_results(
+        "SELECT id, price_min, price_max, charge_amount, deposit_amount FROM {$table} "
+        . "WHERE (deposit_amount IS NULL OR deposit_amount = 0) AND status = 'active'"
+    );
+
+    foreach ( $services as $service ) {
+        // Use price_min as the base price, or charge_amount if available
+        $base_price = $service->price_min > 0 ? $service->price_min : $service->charge_amount;
+        if ( $base_price <= 0 ) {
+            $base_price = $service->price_max > 0 ? $service->price_max : 0;
+        }
+        // Set deposit to 50% of the base price
+        $deposit = $base_price * 0.5;
+        $wpdb->update(
+            $table,
+            array(
+                'deposit_amount'       => $deposit,
+                'is_deposit_required'  => 1,
+            ),
+            array( 'id' => $service->id ),
+            array( '%f', '%d' ),
+            array( '%d' )
+        );
+    }
+
+    // Also clear the transient on plugin/theme update (force refresh on next load)
+    set_transient( 'aura_latepoint_deposits_set', true, MINUTE_IN_SECONDS * 60 );
+}
+add_action( 'admin_init', 'aura_latepoint_set_default_deposits' );
+
+
+/**
+ * Round deposit amounts to nearest multiple of 10.
+ */
+function aura_latepoint_deposit_rounding( $charge_amount, $cart ) {
+    // Only apply to WooCommerce payment processor
+    if ( ! isset( $cart->payment_processor ) || $cart->payment_processor !== 'woocommerce' ) {
+        return $charge_amount;
+    }
+
+    // Only apply to deposit payments (not full or remaining balance)
+    $portion = isset( $cart->payment_portion ) ? $cart->payment_portion : '';
+    if ( $portion !== 'deposit' ) {
+        return $charge_amount;
+    }
+
+    // Calculate 50% deposit of the full charge amount
+    $deposit = (float) $charge_amount * 0.5;
+
+    // Round UP to nearest multiple of 10 (e.g. R293.75 → R300.00, R250 → R250)
+    $rounded = (float) ceil( $deposit / 10 ) * 10;
+
+    return number_format( $rounded, 2, '.', '' );
+}
+add_filter( 'latepoint_convert_charge_amount_to_requirements', 'aura_latepoint_deposit_rounding', 10, 2 );
+
+
+/**
  * Clear browser Cache Storage before returning from a cancelled checkout.
  */
 function aura_enqueue_cancelled_order_home_script() {

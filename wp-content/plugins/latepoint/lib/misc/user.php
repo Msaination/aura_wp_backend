@@ -365,7 +365,12 @@ class User {
 		if ( $this->backend_user_type ) {
 			if ( $this->backend_user_type == LATEPOINT_USER_TYPE_CUSTOM ) {
 				if ( $this->roles && ( $this->roles[0] instanceof Role ) ) {
-					return $this->roles[0]->name;
+					$role_name = $this->roles[0]->name;
+					if ( $role_name ) {
+						return $role_name;
+					} else {
+						return $labels[ $this->backend_user_type ];
+					}
 				} else {
 					return $labels[ $this->backend_user_type ];
 				}

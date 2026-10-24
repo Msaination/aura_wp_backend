@@ -67,35 +67,45 @@ if ( ! class_exists( 'OsPaymentsWoocommerceController' ) ) :
 
 
 		public function start_order_checkout() {
-			if ( ! filter_var( $this->params['invoice_id'], FILTER_VALIDATE_INT ) ) {
-				exit();
-			}
-
-			$invoice            = new OsInvoiceModel( $this->params['invoice_id'] );
-			$transaction_intent = OsTransactionIntentHelper::create_or_update_transaction_intent( $invoice, $this->params );
-			$order = new OsOrderModel( $invoice->order_id );
-
-			WC()->cart->empty_cart();
-			wc_clear_notices();
-			OsPaymentsWoocommerceHelper::populate_checkout_customer( $transaction_intent );
-
-			foreach ( $order->get_items() as $order_item ) {
-				$model = OsPaymentsWoocommerceHelper::get_model_from_order_item( $order_item );
-				if ($model) {
-					$product_id = OsPaymentsWoocommerceHelper::get_or_create_woo_product_by_model($model);
-
-					WC()->cart->add_to_cart( $product_id, 1, 0, array(), array(
-						'lp_custom_price' => $order_item->subtotal,
-						'_latepoint_transaction_intent_key' => $transaction_intent->intent_key
-					) );
+			try {
+				if ( ! filter_var( $this->params['invoice_id'], FILTER_VALIDATE_INT ) ) {
+					exit();
 				}
+
+				$invoice            = new OsInvoiceModel( $this->params['invoice_id'] );
+				$transaction_intent = OsTransactionIntentHelper::create_or_update_transaction_intent( $invoice, $this->params );
+				$order = new OsOrderModel( $invoice->order_id );
+
+				WC()->cart->empty_cart();
+				wc_clear_notices();
+				OsPaymentsWoocommerceHelper::populate_checkout_customer( $transaction_intent );
+
+				foreach ( $order->get_items() as $order_item ) {
+					$model = OsPaymentsWoocommerceHelper::get_model_from_order_item( $order_item );
+					if ($model) {
+						$product_id = OsPaymentsWoocommerceHelper::get_or_create_woo_product_by_model($model);
+
+						WC()->cart->add_to_cart( $product_id, 1, 0, array(), array(
+							'lp_custom_price' => $order_item->subtotal,
+							'_latepoint_transaction_intent_key' => $transaction_intent->intent_key
+						) );
+					}
+				}
+
+				$transaction_intent->update_attributes( [
+					'order_form_page_url' => $this->params['order_form_page_url'] ?? wp_get_original_referer(),
+				] );
+
+				$redirect_url = OsPaymentsWoocommerceHelper::bypass_checkout_and_redirect_to_payment( $transaction_intent );
+
+				$this->send_json( array( 'status' => LATEPOINT_STATUS_SUCCESS, 'message' => $redirect_url ) );
+			} catch ( \Throwable $e ) {
+				$this->send_json( array(
+					'status'  => LATEPOINT_STATUS_ERROR,
+					'message' => $e->getMessage(),
+					'file'    => $e->getFile() . ':' . $e->getLine(),
+				) );
 			}
-
-			$transaction_intent->update_attributes( [
-				'order_form_page_url' => $this->params['order_form_page_url'] ?? wp_get_original_referer(),
-			] );
-
-			$this->send_json( array( 'status' => LATEPOINT_STATUS_SUCCESS, 'message' => wc_get_checkout_url() ) );
 		}
 	}
 
