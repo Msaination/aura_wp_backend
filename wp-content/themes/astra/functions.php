@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Define Constants
  */
-define( 'ASTRA_THEME_VERSION', '4.14.0' );
+define( 'ASTRA_THEME_VERSION', '4.14.1' );
 define( 'ASTRA_THEME_SETTINGS', 'astra-settings' );
 define( 'ASTRA_THEME_DIR', trailingslashit( get_template_directory() ) );
 define( 'ASTRA_THEME_URI', trailingslashit( esc_url( get_template_directory_uri() ) ) );
@@ -212,42 +212,3 @@ require_once ASTRA_THEME_DIR . 'inc/abilities/bootstrap.php';
 require_once ASTRA_THEME_DIR . 'inc/core/deprecated/deprecated-filters.php';
 require_once ASTRA_THEME_DIR . 'inc/core/deprecated/deprecated-hooks.php';
 require_once ASTRA_THEME_DIR . 'inc/core/deprecated/deprecated-functions.php';
-
-add_filter(
-	'astra_header_display',
-	static function ( $display ) {
-		if ( is_front_page() ) {
-			return 'disabled';
-		}
-
-		return $display;
-	}
-);
-
-add_filter(
-	'astra_footer_bar_display',
-	static function ( $display ) {
-		if ( is_front_page() ) {
-			return 'disabled';
-		}
-
-		return $display;
-	}
-);
-
-add_action(
-	'wp_enqueue_scripts',
-	static function () {
-		if ( is_front_page() ) {
-			wp_dequeue_style( 'astra-theme-css' );
-			wp_dequeue_style( 'astra-theme-dynamic' );
-			wp_enqueue_style(
-				'aura-reference-layout',
-				get_theme_file_uri( '/aura-reference-layout.css' ),
-				array(),
-				'1.0.0'
-			);
-		}
-	},
-	20
-);

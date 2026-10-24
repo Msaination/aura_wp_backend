@@ -69,6 +69,34 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </div>
             </div>
         </div>
+        <div class="white-box section-anchor" id="stickySectionEvents">
+            <div class="white-box-header">
+                <div class="os-form-sub-header"><h3><?php esc_html_e( 'Events', 'latepoint' ); ?></h3></div>
+            </div>
+            <div class="white-box-content no-padding">
+                <div class="sub-section-row">
+                    <div class="sub-section-label">
+                        <h3><?php esc_html_e( 'Events', 'latepoint' ) ?></h3>
+                    </div>
+                    <div class="sub-section-content">
+						<?php echo OsFormHelper::toggler_field( 'settings[enable_events_functionality]', __( 'Enable Events Functionality', 'latepoint' ), OsSettingsHelper::is_on( 'enable_events_functionality' ), 'eventsSettingsSubfields', false, [ 'sub_label' => __( 'Enable to let customers browse and register for events. When disabled, event pages, shortcodes, and the registration wizard step are inactive.', 'latepoint' ) ] ); ?>
+                    </div>
+                </div>
+                <div id="eventsSettingsSubfields" style="border-top: 1px solid #dcdad7; <?php echo OsSettingsHelper::is_on( 'enable_events_functionality' ) ? '' : 'display: none;'; ?>">
+					<?php
+					/**
+					 * Plug after the Events settings card's main toggle — for event-related settings
+					 * that belong under the Events umbrella but live in an addon (e.g. Pro's E-Ticket
+					 * QR check-in).
+					 *
+					 * @since 5.7.0
+					 * @hook latepoint_general_settings_section_events_after
+					 *
+					 */
+					do_action( 'latepoint_general_settings_section_events_after' ); ?>
+                </div>
+            </div>
+        </div>
         <div class="white-box section-anchor" id="stickySectionRestrictions">
             <div class="white-box-header">
                 <div class="os-form-sub-header"><h3><?php esc_html_e( 'Restrictions', 'latepoint' ); ?></h3></div>
@@ -203,7 +231,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                     </div>
                     <div class="sub-section-content">
 						<?php echo OsFormHelper::toggler_field( 'settings[validate_phone_number]', __( 'Validate phone typed fields if they are set as required', 'latepoint' ), OsSettingsHelper::is_on( 'validate_phone_number' ), false, false, [ 'sub_label' => __( 'Reject invalid phone for customers and agents if the phone field is set as required', 'latepoint' ) ] ); ?>
-						<?php echo OsFormHelper::toggler_field( 'settings[mask_phone_number_fields]', __( 'Format phone number on input', 'latepoint' ), OsSettingsHelper::is_on( 'mask_phone_number_fields', LATEPOINT_VALUE_ON ), false, false, [ 'sub_label' => __( 'Applies formatting on phone fields based on the country selected (not recommended for countries that have multiple NSN lengths)', 'latepoint' ) ] ); ?>
+						<?php echo OsFormHelper::toggler_field( 'settings[mask_phone_number_fields]', __( 'Restrict phone input to valid digits', 'latepoint' ), OsSettingsHelper::is_on( 'mask_phone_number_fields', LATEPOINT_VALUE_ON ), false, false, [ 'sub_label' => __( "Blocks characters that can't appear in a valid number for the selected country, and stops input at that country's maximum length.", 'latepoint' ) ] ); ?>
 						<?php echo OsFormHelper::toggler_field( 'settings[show_dial_code_with_flag]', __( 'Show country dial code next to flag', 'latepoint' ), OsSettingsHelper::is_enabled_show_dial_code_with_flag(), false, false, [ 'sub_label' => __( 'If enabled, will show a country code next to a flag, for example +1 for United States', 'latepoint' ) ] ); ?>
                     </div>
                 </div>
@@ -874,6 +902,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     </div>
     <div class="side-nav-body">
         <div><a href="#stickySectionAppointment" class="is-active"><?php esc_html_e( 'Appointments', 'latepoint' ); ?></a></div>
+        <div><a href="#stickySectionEvents"><?php esc_html_e( 'Events', 'latepoint' ); ?></a></div>
         <div><a href="#stickySectionRestrictions"><?php esc_html_e( 'Restrictions', 'latepoint' ); ?></a></div>
         <div><a href="#stickySectionCurrency"><?php esc_html_e( 'Currency & Price', 'latepoint' ); ?></a></div>
         <div><a href="#stickySectionPhone"><?php esc_html_e( 'Phone', 'latepoint' ); ?></a></div>
@@ -899,6 +928,48 @@ if ( ! defined( 'ABSPATH' ) ) {
         <div><a href="#stickySectionAbilities"><?php esc_html_e( 'MCP', 'latepoint' ); ?></a></div>
         <div><a href="#stickySectionOther"><?php esc_html_e( 'Other', 'latepoint' ); ?></a></div>
     </div>
+    <?php
+    /**
+     * Doc links shown in the "Resources" box below the general settings side nav.
+     *
+     * @param {array} $help_links Array of ['label' => string, 'url' => string].
+     * @returns {array} The filtered array of help links.
+     *
+     * @since 5.7.5
+     * @hook latepoint_general_settings_help_links
+     *
+     */
+    $help_links = apply_filters(
+        'latepoint_general_settings_help_links',
+        [
+            [
+                'label' => __( 'Setting up passwordless login and OTP codes', 'latepoint' ),
+                'url'   => 'https://latepoint.com/docs/how-to-configure-customer-authentication-and-otp-verification-in-latepoint/',
+            ],
+            [
+                'label' => __( 'Blocking customers who keep missing appointments', 'latepoint' ),
+                'url'   => 'https://latepoint.com/docs/no-show-customer-restrictions/',
+            ],
+            [
+                'label' => __( 'Showing your business timezone to customers', 'latepoint' ),
+                'url'   => 'https://latepoint.com/docs/show-your-wordpress-timezone-on-the-customer-booking-form/',
+            ],
+            [
+                'label' => __( 'Sending customers to your own thank-you page', 'latepoint' ),
+                'url'   => 'https://latepoint.com/docs/how-to-redirect-to-a-custom-thank-you-page-after-booking-process-is-complete/',
+            ],
+            [
+                'label' => __( 'Connecting Claude, Cursor and other AI tools', 'latepoint' ),
+                'url'   => 'https://latepoint.com/docs/latepoint-abilities-connect-ai-clients-to-your-booking-system/',
+            ],
+            [
+                'label' => __( 'Creating and emailing invoices', 'latepoint' ),
+                'url'   => 'https://latepoint.com/docs/how-to-use-invoices-in-latepoint/',
+            ],
+        ]
+    );
+    include LATEPOINT_LIB_ABSPATH . 'views/partials/_help_box.php';
+    ?>
 
 </div>
 </div>

@@ -73,6 +73,9 @@ class Ai1wm_Export_Controller {
 		// Error handling is set up for the authorised request, after the secret-key check.
 		ai1wm_setup_errors();
 
+		// Release the caller before the work starts
+		ai1wm_close_connection( $params );
+
 		// Loop over filters
 		if ( ( $filters = ai1wm_get_filters( 'ai1wm_export' ) ) ) {
 			while ( $hooks = current( $filters ) ) {

@@ -86,7 +86,19 @@ class Ai1wm_Rest_Controller {
 					$password_arg,
 					array(
 						'options'      => array( 'type' => 'object', 'required' => false ),
-						'find_replace' => array( 'type' => 'array', 'required' => false ),
+						'find_replace' => array(
+							'type'     => 'array',
+							'required' => false,
+							'items'    => array(
+								'type'                 => 'object',
+								'required'             => array( 'find', 'replace' ),
+								'properties'           => array(
+									'find'    => array( 'type' => 'string' ),
+									'replace' => array( 'type' => 'string' ),
+								),
+								'additionalProperties' => false,
+							),
+						),
 					)
 				),
 			)
@@ -279,7 +291,7 @@ class Ai1wm_Rest_Controller {
 	 * @return bool
 	 */
 	public static function can_export() {
-		return self::can_run_on_network() && current_user_can( 'export' );
+		return self::can_run_on_network() && current_user_can( 'ai1wm_export_site' );
 	}
 
 	/**

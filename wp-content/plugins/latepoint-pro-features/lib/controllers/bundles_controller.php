@@ -21,7 +21,7 @@ if ( ! class_exists( 'OsBundlesController' ) ) :
 			$this->views_folder          = plugin_dir_path( __FILE__ ) . '../views/bundles/';
 			$this->vars['page_header']   = OsMenuHelper::get_menu_items_by_id( 'services' );
 			$this->vars['breadcrumbs'][] = array(
-				'label' => __( 'Bundles', 'latepoint-pro-features' ),
+				'label' => __( 'Packages', 'latepoint-pro-features' ),
 				'link'  => OsRouterHelper::build_link( OsRouterHelper::build_route_name( 'bundles', 'index' ) ),
 			);
 		}
@@ -33,9 +33,9 @@ if ( ! class_exists( 'OsBundlesController' ) ) :
 		public function edit() {
 			$bundle_id = $this->params['id'];
 
-			$this->vars['page_header']   = __( 'Edit Bundle', 'latepoint-pro-features' );
+			$this->vars['page_header']   = __( 'Edit Package', 'latepoint-pro-features' );
 			$this->vars['breadcrumbs'][] = array(
-				'label' => __( 'Edit Bundle', 'latepoint-pro-features' ),
+				'label' => __( 'Edit Package', 'latepoint-pro-features' ),
 				'link'  => false,
 			);
 

@@ -676,7 +676,6 @@ class OsStepsHelper {
 
 		if ( self::is_bundle_scheduling() ) {
 			// booking a bundle that was already paid for, skip payment step
-			// TODO check if valid order item id
 			self::remove_step_by_name( 'payment__methods' );
 			self::remove_step_by_name( 'payment__times' );
 			self::remove_step_by_name( 'payment__portions' );
@@ -1172,8 +1171,11 @@ class OsStepsHelper {
 		if ( OsAuthHelper::is_customer_auth_disabled() ) {
 
 			if ( ! empty( $customer_params['uuid'] ) ) {
-				$customer = new OsCustomerModel();
-				$customer = $customer->where( [ 'uuid' => $customer_params['uuid'] ] )->set_limit( 1 )->get_results_as_models();
+				// uuid must be a scalar - a nested array would inject query operators (e.g. LIKE) into the lookup.
+				if ( ! is_scalar( $customer_params['uuid'] ) ) {
+					return self::$customer_object;
+				}
+				$customer = OsCustomerHelper::get_by_uuid( sanitize_text_field( (string) $customer_params['uuid'] ) );
 				if ( $customer ) {
 					self::$customer_object = $customer;
 				}
@@ -1226,6 +1228,10 @@ class OsStepsHelper {
 		// booking directly in a chosen lifecycle state (e.g. self-approve a pending booking).
 		// The server assigns the status via the model default.
 		unset( $booking_object_params['status'] );
+		// order_item_id is mass assignable - it may only arrive through the verified presets path below
+		unset( $booking_object_params['order_item_id'] );
+		// drop id - set_data() would load-by-id before the allow-list; the form never sends booking[id].
+		unset( $booking_object_params['id'] );
 
 		self::$booking_object = new OsBookingModel();
 		self::$booking_object->set_data( $booking_object_params );
@@ -1277,8 +1283,8 @@ class OsStepsHelper {
 		if ( isset( self::$presets['selected_start_time'] ) && is_numeric( self::$presets['selected_start_time'] ) ) {
 			self::$booking_object->start_time = self::$presets['selected_start_time'];
 		}
-		// preselected time
-		if ( isset( self::$presets['order_item_id'] ) && is_numeric( self::$presets['order_item_id'] ) ) {
+		// preselected order item - only the owning customer may schedule from a purchased bundle
+		if ( isset( self::$presets['order_item_id'] ) && is_numeric( self::$presets['order_item_id'] ) && OsBundlesHelper::can_current_customer_schedule( (int) self::$presets['order_item_id'], self::$booking_object->service_id ) ) {
 			self::$booking_object->order_item_id = self::$presets['order_item_id'];
 			// TODO - move to pro
 			// it's a bundle, preset values from a bundle
@@ -2457,7 +2463,19 @@ class OsStepsHelper {
 			$steps_with_labels[ $step_code ] = self::get_step_label_by_code( $step_code );
 		}
 
-		return $steps_with_labels;
+		/**
+		 * Filters the list of steps offered in the Booking Form settings step-text editor.
+		 * Use this to remove a step whose text/position should not be admin-configurable
+		 * (e.g. a step that only ever appears automatically as part of a fixed sub-flow).
+		 *
+		 * @param {array} $steps_with_labels Step codes mapped to their labels.
+		 *
+		 * @returns {array} Filtered array of step codes mapped to their labels.
+		 * @since 5.7.0
+		 * @hook latepoint_steps_for_select
+		 *
+		 */
+		return apply_filters( 'latepoint_steps_for_select', $steps_with_labels );
 	}
 
 
@@ -2526,7 +2544,7 @@ class OsStepsHelper {
 	public static function get_formatted_extra_step_content( string $step_code, string $placement ): string {
 		$content = self::get_step_setting_value( $step_code, 'main_panel_content_' . $placement );
 
-		return ! empty( $content ) ? '<div class="latepoint-step-content-text-left">' . $content . '</div>' : '';
+		return ! empty( $content ) ? '<div class="latepoint-step-content-text-left">' . wp_kses_post( $content ) . '</div>' : '';
 	}
 
 
@@ -2606,6 +2624,12 @@ class OsStepsHelper {
 		return $step_settings_html;
 	}
 
+	/**
+	 * These values are auto-seeded into the `steps_settings` DB option on first load (see
+	 * get_steps_settings()) and stay as raw English literals on purpose. OsTranslationHelper
+	 * translates them at render time by comparing the stored value against these defaults, so any
+	 * string changed here must be mirrored in OsTranslationHelper::get_translatable_default_strings().
+	 */
 	public static function get_default_value_for_step_settings( string $step_code ): array {
 		$settings = [
 			'booking__services'   => [
@@ -2851,8 +2875,11 @@ class OsStepsHelper {
 				echo '<div class="summary-status-wrapper summary-status-style-' . esc_attr( OsStepsHelper::get_step_setting_value( $selected_step_code, 'order_confirmation_message_style', 'green' ) ) . '">';
 				echo '<div class="summary-status-inner">';
 				echo '<div class="ss-icon"></div>';
-				echo '<div class="ss-title bf-side-heading editable-setting" data-setting-key="[' . esc_attr( $selected_step_code ) . '][order_confirmation_message_title]" contenteditable="true">' . esc_html( OsStepsHelper::get_step_setting_value( $selected_step_code, 'order_confirmation_message_title', __( 'Appointment Confirmed', 'latepoint' ) ) ) . '</div>';
-				echo '<div class="ss-description bf-side-heading editable-setting" data-setting-key="[' . esc_attr( $selected_step_code ) . '][order_confirmation_message_content]" contenteditable="true">' . esc_html( OsStepsHelper::get_step_setting_value( $selected_step_code, 'order_confirmation_message_content', __( 'We look forward to seeing you.', 'latepoint' ) ) ) . '</div>';
+				// Fallback defaults are kept as raw English (not gettext-wrapped): this admin preview
+				// is what gets harvested and saved back into steps_settings, so a translated fallback
+				// here would permanently overwrite the English default that OsTranslationHelper relies on.
+				echo '<div class="ss-title bf-side-heading editable-setting" data-setting-key="[' . esc_attr( $selected_step_code ) . '][order_confirmation_message_title]" contenteditable="true">' . esc_html( OsStepsHelper::get_step_setting_value( $selected_step_code, 'order_confirmation_message_title', 'Appointment Confirmed' ) ) . '</div>';
+				echo '<div class="ss-description bf-side-heading editable-setting" data-setting-key="[' . esc_attr( $selected_step_code ) . '][order_confirmation_message_content]" contenteditable="true">' . esc_html( OsStepsHelper::get_step_setting_value( $selected_step_code, 'order_confirmation_message_content', 'We look forward to seeing you.' ) ) . '</div>';
 				echo '<div class="ss-confirmation-number"><span>' . esc_html__( 'Order #', 'latepoint' ) . '</span><strong>KDFJ934K</strong></div>';
 				echo '</div>';
 				echo '</div>';
@@ -3050,9 +3077,11 @@ class OsStepsHelper {
 	public static function set_active_cart_item_object( array $cart_item_params = [] ): OsCartItemModel {
 		self::$active_cart_item = new OsCartItemModel();
 		if ( ! empty( $cart_item_params['id'] ) ) {
-			self::$active_cart_item->id = $cart_item_params['id'];
-			// try to find it in cart
-			$cart_item = new OsCartItemModel( self::$active_cart_item->id );
+			// accept id only if it belongs to the current cart.
+			$cart_item = new OsCartItemModel( $cart_item_params['id'] );
+			if ( ! $cart_item->is_new_record() && isset( self::$cart_object ) && ! empty( self::$cart_object->id ) && (int) $cart_item->cart_id === (int) self::$cart_object->id ) {
+				self::$active_cart_item->id = $cart_item->id;
+			}
 			if ( $cart_item->is_new_record() ) {
 				// not found, reset active cart item ID
 				self::$active_cart_item = new OsCartItemModel();
@@ -3212,6 +3241,8 @@ class OsStepsHelper {
 			self::load_order_object( self::$cart_object->order_id );
 		} else {
 			self::load_order_object();
+			// drop id - cart resolves from the session uuid only, never a user-supplied key.
+			unset( $params['id'] );
 			self::$cart_object->set_data( $params );
 
 			// set source id

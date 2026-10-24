@@ -71,18 +71,7 @@ if ( ! class_exists( 'OsStepsController' ) ) :
 		public function load_datepicker_month() {
 			OsStepsHelper::set_required_objects( $this->params );
 
-			$target_date_string = sanitize_text_field( $this->params['target_date_string'] ?? '' );
-			if ( ! preg_match( '/^(\d{4})-(\d{1,2})-1$/', $target_date_string, $date_parts ) || ! checkdate( (int) $date_parts[2], 1, (int) $date_parts[1] ) ) {
-				wp_send_json(
-					[
-						'status'  => LATEPOINT_STATUS_ERROR,
-						'message' => __( 'The calendar date is invalid. Please reload the booking form and try again.', 'latepoint' ),
-					]
-				);
-				return;
-			}
-
-			$target_date       = new OsWpDateTime( $target_date_string );
+			$target_date       = new OsWpDateTime( $this->params['target_date_string'] );
 			$calendar_settings = [
 				'layout'        => $this->params['calendar_layout'] ?? 'classic',
 				'timezone_name' => $this->params['timezone_name'] ?? false,
@@ -123,11 +112,17 @@ if ( ! class_exists( 'OsStepsController' ) ) :
 					] 
 				);
 			} else {
+				// The generic slot message doesn't apply to an event registration (no time slot
+				// involved) — surface is_bookable()'s real reason for that case only; every other
+				// item type (booking, bundle) keeps the exact message it's always shown.
+				$message = OsStepsHelper::$cart_object->contains_event_registration()
+					? ( $order_intent->get_error_messages() ?: __( 'Selected booking slot is not available anymore. Please pick a different time slot.', 'latepoint' ) )
+					: __( 'Selected booking slot is not available anymore. Please pick a different time slot.', 'latepoint' );
 				$this->send_json(
 					[
 						'status'  => LATEPOINT_STATUS_ERROR,
-						'message' => __( 'Selected booking slot is not available anymore. Please pick a different time slot.', 'latepoint' ),
-					] 
+						'message' => $message,
+					]
 				);
 			}
 		}
@@ -276,8 +271,16 @@ if ( ! class_exists( 'OsStepsController' ) ) :
 				OsCartsHelper::reset_cart();
 				OsStepsHelper::set_cart_object();
 			}
-			// clear cart if "shopping cart" feature is not enabled
-			if ( ! OsCartsHelper::can_checkout_multiple_items() ) {
+			// clear cart if "shopping cart" feature is not enabled, or if the flow being started
+			// would mix an event registration with a booking/bundle — they must never coexist in
+			// one order (see OsOrdersHelper's booking-only assumptions in generate_order_items_html()
+			// and friends).
+			$incoming_event_id = (int) ( $merged_params['presets']['selected_event_id'] ?? 0 );
+			if (
+				! OsCartsHelper::can_checkout_multiple_items()
+				|| ( $incoming_event_id && OsStepsHelper::$cart_object->contains_booking_or_bundle() )
+				|| ( ! $incoming_event_id && OsStepsHelper::$cart_object->contains_event_registration() )
+			) {
 				OsStepsHelper::$cart_object->clear();
 			}
 

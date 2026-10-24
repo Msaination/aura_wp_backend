@@ -117,6 +117,13 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 	protected $logger;
 
 	/**
+	 * Whether the currency filter is running.
+	 *
+	 * @var bool $is_filtering_currency
+	 */
+	private $is_filtering_currency = false;
+
+	/**
 	 * Constructor
 	 */
 	public function __construct() {
@@ -202,6 +209,9 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 
 		// Validate the gateway credentials.
 		add_action( 'update_option_woocommerce_payfast_settings', array( $this, 'validate_payfast_credentials' ), 10, 2 );
+
+		add_filter( 'pre_update_option_woocommerce_payfast_settings', array( $this, 'protect_credential_settings' ), 10, 2 );
+		add_filter( 'woocommerce_rest_prepare_payment_gateway', array( $this, 'redact_rest_credential_settings' ), 10, 2 );
 	}
 
 	/**
@@ -273,10 +283,13 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 				'default'     => '',
 			),
 			'pass_phrase'      => array(
-				'title'       => __( 'Passphrase', 'woocommerce-gateway-payfast' ),
-				'type'        => 'text',
-				'description' => __( '* Required. Needed to ensure the data passed through is secure.', 'woocommerce-gateway-payfast' ),
-				'default'     => '',
+				'title'             => __( 'Passphrase', 'woocommerce-gateway-payfast' ),
+				'type'              => 'password',
+				'description'       => __( '* Required. Needed to ensure the data passed through is secure.', 'woocommerce-gateway-payfast' ),
+				'default'           => '',
+				'custom_attributes' => array(
+					'autocomplete' => 'new-password',
+				),
 			),
 			'send_debug_email' => array(
 				'title'   => __( 'Send Debug Emails', 'woocommerce-gateway-payfast' ),
@@ -322,6 +335,203 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 	}
 
 	/**
+	 * Get the settings that only users who can manage the credentials may change.
+	 *
+	 * @return string[]
+	 */
+	private function get_credential_setting_keys() {
+		// Sandbox mode is included because it skips the ITN source IP check.
+		return array(
+			'merchant_id',
+			'merchant_key',
+			'pass_phrase',
+			'testmode',
+		);
+	}
+
+	/**
+	 * Check if the current user can view and change the Payfast credentials.
+	 *
+	 * @return bool
+	 */
+	public function can_manage_credentials() {
+		/**
+		 * Filter the capability needed to manage the Payfast credentials.
+		 *
+		 * @since 1.7.9
+		 *
+		 * @param string $capability Capability name. Default 'manage_options'.
+		 */
+		$capability = apply_filters( 'woocommerce_gateway_payfast_credentials_capability', 'manage_options' );
+
+		if ( ! is_string( $capability ) || '' === $capability ) {
+			$capability = 'manage_options';
+		}
+
+		return current_user_can( $capability ); // phpcs:ignore WordPress.WP.Capabilities.Undetermined -- Validated above.
+	}
+
+	/**
+	 * Generate the settings HTML, with the credential fields disabled for other users.
+	 *
+	 * @param array $form_fields Form fields.
+	 * @param bool  $echo        Whether to echo the output.
+	 * @return string
+	 */
+	public function generate_settings_html( $form_fields = array(), $echo = true ) { // phpcs:ignore Universal.NamingConventions.NoReservedKeywordParameterNames.echoFound -- Parent signature.
+		if ( empty( $form_fields ) ) {
+			$form_fields = $this->get_form_fields();
+		}
+
+		if ( ! $this->can_manage_credentials() ) {
+			foreach ( $this->get_credential_setting_keys() as $key ) {
+				if ( ! isset( $form_fields[ $key ] ) ) {
+					continue;
+				}
+
+				$form_fields[ $key ]['disabled']    = true;
+				$form_fields[ $key ]['description'] = trim( ( $form_fields[ $key ]['description'] ?? '' ) . ' ' . esc_html__( 'Only administrators can change this setting.', 'woocommerce-gateway-payfast' ) );
+			}
+		}
+
+		return parent::generate_settings_html( $form_fields, $echo );
+	}
+
+	/**
+	 * Generate the password field HTML, without printing the saved passphrase.
+	 *
+	 * @param string $key  Field key.
+	 * @param array  $data Field data.
+	 * @return string
+	 */
+	public function generate_password_html( $key, $data ) {
+		if ( 'pass_phrase' !== $key ) {
+			return parent::generate_password_html( $key, $data );
+		}
+
+		$pass_phrase = $this->get_option( $key );
+		if ( '' !== $pass_phrase ) {
+			$data['placeholder'] = __( 'A passphrase is saved. Leave blank to keep it.', 'woocommerce-gateway-payfast' );
+			$data['description'] = str_replace(
+				__( '* Required. Needed to ensure the data passed through is secure.', 'woocommerce-gateway-payfast' ),
+				__( 'Needed to ensure the data passed through is secure.', 'woocommerce-gateway-payfast' ),
+				$data['description'] ?? ''
+			);
+		}
+
+		$this->settings[ $key ] = '';
+		$html                   = parent::generate_password_html( $key, $data );
+		$this->settings[ $key ] = $pass_phrase;
+
+		return $html;
+	}
+
+	/**
+	 * Validate the merchant ID field.
+	 *
+	 * @param string $key   Field key.
+	 * @param mixed  $value Posted value.
+	 * @return string
+	 */
+	public function validate_merchant_id_field( $key, $value ) {
+		if ( ! $this->can_manage_credentials() ) {
+			return $this->get_option( $key );
+		}
+
+		return $this->validate_text_field( $key, is_string( $value ) ? $value : '' );
+	}
+
+	/**
+	 * Validate the merchant key field.
+	 *
+	 * @param string $key   Field key.
+	 * @param mixed  $value Posted value.
+	 * @return string
+	 */
+	public function validate_merchant_key_field( $key, $value ) {
+		return $this->validate_merchant_id_field( $key, $value );
+	}
+
+	/**
+	 * Validate the passphrase field. A blank value keeps the saved passphrase.
+	 *
+	 * @param string $key   Field key.
+	 * @param mixed  $value Posted value.
+	 * @return string
+	 */
+	public function validate_pass_phrase_field( $key, $value ) {
+		if ( ! $this->can_manage_credentials() || ! is_string( $value ) || '' === trim( $value ) ) {
+			return $this->get_option( $key );
+		}
+
+		return $this->validate_text_field( $key, $value );
+	}
+
+	/**
+	 * Validate the sandbox field.
+	 *
+	 * @param string $key   Field key.
+	 * @param mixed  $value Posted value.
+	 * @return string
+	 */
+	public function validate_testmode_field( $key, $value ) {
+		if ( ! $this->can_manage_credentials() ) {
+			return $this->get_option( $key );
+		}
+
+		return $this->validate_checkbox_field( $key, $value );
+	}
+
+	/**
+	 * Keep the saved credentials when another logged-in user updates the settings (settings page or REST API).
+	 *
+	 * @param mixed $value     New settings.
+	 * @param mixed $old_value Old settings.
+	 * @return mixed
+	 */
+	public function protect_credential_settings( $value, $old_value ) {
+		if ( ! is_user_logged_in() || $this->can_manage_credentials() ) {
+			return $value;
+		}
+
+		if ( ! is_array( $value ) ) {
+			return $old_value;
+		}
+
+		$old_value = is_array( $old_value ) ? $old_value : array();
+		foreach ( $this->get_credential_setting_keys() as $key ) {
+			if ( array_key_exists( $key, $old_value ) ) {
+				$value[ $key ] = $old_value[ $key ];
+			} else {
+				unset( $value[ $key ] );
+			}
+		}
+
+		return $value;
+	}
+
+	/**
+	 * Hide the passphrase in REST API responses from users who cannot manage the credentials.
+	 *
+	 * @param WP_REST_Response   $response Response.
+	 * @param WC_Payment_Gateway $gateway  Gateway.
+	 * @return WP_REST_Response
+	 */
+	public function redact_rest_credential_settings( $response, $gateway ) {
+		if ( ! $response instanceof WP_REST_Response || ! $gateway instanceof WC_Payment_Gateway || $this->id !== $gateway->id || $this->can_manage_credentials() ) {
+			return $response;
+		}
+
+		$data = $response->get_data();
+		if ( isset( $data['settings']['pass_phrase']['value'] ) ) {
+			$data['settings']['pass_phrase']['value'] = '';
+			$response->set_data( $data );
+		}
+
+		return $response;
+	}
+
+	/**
 	 * Add a notice to the merchant_key and merchant_id fields when in test mode.
 	 *
 	 * @since 1.0.0
@@ -361,6 +571,11 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 	 */
 	public function is_available() {
 		if ( 'yes' === $this->enabled ) {
+			$order_id = absint( get_query_var( 'order-pay' ) );
+			if ( $order_id && ! $this->is_order_currency_supported( wc_get_order( $order_id ) ) ) {
+				return false;
+			}
+
 			$errors = $this->check_requirements();
 			// Prevent using this gateway on frontend if there are any configuration errors.
 			return 0 === count( $errors );
@@ -417,6 +632,11 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 
 		if ( ! $key_valid || ! current_user_can( 'pay_for_order', $order->get_id() ) ) { // phpcs:ignore WordPress.WP.Capabilities.Unknown
 			wc_print_notice( esc_html__( 'Sorry, you are not allowed to pay for this order.', 'woocommerce-gateway-payfast' ), 'error' );
+			return;
+		}
+
+		if ( ! $this->is_order_currency_supported( $order ) ) {
+			wc_print_notice( esc_html__( 'This order cannot be paid with Payfast because its currency is not South African Rand (ZAR).', 'woocommerce-gateway-payfast' ), 'error' );
 			return;
 		}
 
@@ -760,6 +980,9 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 			if ( ! $this->amounts_equal( $data['amount_gross'], self::get_order_prop( $order, 'order_total' ) ) ) {
 				$payfast_error         = true;
 				$payfast_error_message = PF_ERR_AMOUNT_MISMATCH;
+			} elseif ( ! $this->is_order_currency_supported( $order ) ) {
+				$payfast_error         = true;
+				$payfast_error_message = PF_ERR_CURRENCY_MISMATCH;
 			} elseif ( strcasecmp( $data['custom_str1'], self::get_order_prop( $original_order, 'order_key' ) ) !== 0 ) {
 				// Check session ID.
 				$payfast_error         = true;
@@ -1246,11 +1469,16 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 			return;
 		}
 
-		$response = $this->submit_subscription_payment( $subscription, $amount_to_charge );
+		if ( ! $this->is_order_currency_supported( $renewal_order ) ) {
+			$response = new WP_Error( 'payfast_unsupported_currency', esc_html__( 'Payfast can only charge subscriptions in South African Rand (ZAR).', 'woocommerce-gateway-payfast' ) );
+		} else {
+			$response = $this->submit_subscription_payment( $subscription, $amount_to_charge );
+		}
 
 		if ( is_wp_error( $response ) ) {
 			/* translators: 1: error code 2: error message */
 			$renewal_order->update_status( 'failed', sprintf( esc_html__( 'Payfast Subscription renewal transaction failed (%1$s:%2$s)', 'woocommerce-gateway-payfast' ), $response->get_error_code(), $response->get_error_message() ) );
+			return;
 		}
 		// Payment will be completion will be capture only when the ITN callback is sent to $this->handle_itn_request().
 		$renewal_order->add_order_note( esc_html__( 'Payfast Subscription renewal transaction submitted.', 'woocommerce-gateway-payfast' ) );
@@ -1267,6 +1495,7 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 		$token     = $this->_get_subscription_token( $subscription );
 		$item_name = $this->get_subscription_name( $subscription );
 
+		$latest_order_to_renew = null;
 		foreach ( $subscription->get_related_orders( 'all', 'renewal' ) as $order ) {
 			$statuses_to_charge = array( 'on-hold', 'failed', 'pending' );
 			if ( in_array( $order->get_status(), $statuses_to_charge, true ) ) {
@@ -1274,6 +1503,12 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 				break;
 			}
 		}
+
+		if ( ! $this->is_order_currency_supported( $subscription ) || ! $this->is_order_currency_supported( $latest_order_to_renew ) ) {
+			$this->log( 'Subscription renewal not submitted: the subscription or renewal order currency is not ZAR.' );
+			return new WP_Error( 'payfast_unsupported_currency', esc_html__( 'Payfast can only charge subscriptions in South African Rand (ZAR).', 'woocommerce-gateway-payfast' ) );
+		}
+
 		$item_description = wp_json_encode( array( 'renewal_order_id' => self::get_order_prop( $latest_order_to_renew, 'id' ) ) );
 
 		return $this->submit_ad_hoc_payment( $token, $amount_to_charge, $item_name, $item_description );
@@ -1538,6 +1773,7 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 		define( 'PF_ERR_BAD_ACCESS', esc_html__( 'Bad access of page', 'woocommerce-gateway-payfast' ) );
 		define( 'PF_ERR_BAD_SOURCE_IP', esc_html__( 'Bad source IP address', 'woocommerce-gateway-payfast' ) );
 		define( 'PF_ERR_CONNECT_FAILED', esc_html__( 'Failed to connect to Payfast', 'woocommerce-gateway-payfast' ) );
+		define( 'PF_ERR_CURRENCY_MISMATCH', esc_html__( 'Currency mismatch', 'woocommerce-gateway-payfast' ) );
 		define( 'PF_ERR_INVALID_SIGNATURE', esc_html__( 'Security signature mismatch', 'woocommerce-gateway-payfast' ) );
 		define( 'PF_ERR_MERCHANT_ID_MISMATCH', esc_html__( 'Merchant ID mismatch', 'woocommerce-gateway-payfast' ) );
 		define( 'PF_ERR_NO_SESSION', esc_html__( 'No saved session found for ITN transaction', 'woocommerce-gateway-payfast' ) );
@@ -1596,33 +1832,360 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 	}
 
 	/**
-	 * Validate the IP address to make sure it's coming from Payfast.
+	 * Get the IP address ranges Payfast sends ITN requests from.
 	 *
-	 * @param string $source_ip Source IP.
-	 * @since 1.0.0
-	 * @return bool
+	 * Payfast publishes its ITN senders as IPv4 CIDR ranges. The list is hardcoded on purpose:
+	 * looking the ranges up at request time would put a network call in the payment notification
+	 * path, where a slow or failing lookup silently shrinks the allowlist.
+	 *
+	 * @since 1.7.9
+	 *
+	 * @return string[] IPv4 ranges in CIDR notation. A bare address is treated as a single host.
 	 */
-	public function is_valid_ip( $source_ip ) {
-		// Variable initialization.
-		$valid_hosts = array(
+	public function get_valid_ip_ranges() {
+		/*
+		 * The first five entries are the ranges Payfast documents for its ITN servers.
+		 * 13.245.74.88 is a production address Payfast has shared with merchants for
+		 * allowlisting, and the 3.163.x addresses are the static CloudFront pool that fronts
+		 * payment.payfast.io and api.payfast.co.za. Payfast confirmed all of them should be
+		 * allowlisted. The CloudFront pool is not a contiguous block, so it is listed address by
+		 * address rather than as a range.
+		 *
+		 * Payfast asks that its published DNS records be considered alongside this list, and
+		 * declined to guarantee that notifications only ever come from published addresses, so
+		 * anything this list misses gets a second chance against DNS in is_valid_ip(). Addresses
+		 * such as 34.107.176.71 (www) and 34.120.184.229 (sandbox) are reachable that way without
+		 * being hardcoded here.
+		 */
+		$valid_ranges = array(
+			'197.97.145.144/28',
+			'41.74.179.192/27',
+			'102.216.36.0/28',
+			'102.216.36.128/28',
+			'144.126.193.139',
+			'13.245.74.88',
+			'3.163.232.237',
+			'3.163.233.237',
+			'3.163.234.237',
+			'3.163.235.237',
+			'3.163.236.237',
+			'3.163.237.237',
+			'3.163.238.237',
+			'3.163.239.237',
+			'3.163.240.237',
+			'3.163.241.237',
+			'3.163.242.237',
+			'3.163.243.237',
+			'3.163.244.237',
+			'3.163.245.237',
+			'3.163.246.237',
+			'3.163.247.237',
+			'3.163.248.237',
+			'3.163.249.237',
+			'3.163.250.237',
+			'3.163.251.237',
+			'3.163.252.237',
+		);
+
+		/**
+		 * Filter the IP address ranges ITN requests are accepted from.
+		 *
+		 * Every entry must be a string holding either an IPv4 address in CIDR notation or a bare
+		 * IPv4 address for a single host. An entry that is not a string, or that does not parse
+		 * as one of those two forms, is dropped and the rest of the list is still used. A return
+		 * value that is not an array, or that leaves no usable entry once those are dropped, is
+		 * ignored in favour of the ranges shipped with the plugin.
+		 *
+		 * This list decides the first pass only, not the whole answer. When it does not match,
+		 * is_valid_ip() falls back to the addresses the Payfast hostnames resolve to, so narrowing
+		 * this list does not by itself narrow the senders that are accepted: an address that
+		 * resolves is still accepted through that fallback. To restrict senders to exactly what
+		 * this filter returns, also return an empty array from the companion filter
+		 * woocommerce_gateway_payfast_valid_ip_hostnames, which switches the fallback off.
+		 *
+		 * @since 1.7.9
+		 *
+		 * @param string[] $valid_ranges IPv4 ranges in CIDR notation.
+		 */
+		$filtered_ranges = apply_filters( 'woocommerce_gateway_payfast_valid_ip_ranges', $valid_ranges );
+
+		if ( ! is_array( $filtered_ranges ) ) {
+			$this->log( 'Ignoring woocommerce_gateway_payfast_valid_ip_ranges: expected an array, got ' . gettype( $filtered_ranges ) . '.' );
+			return $valid_ranges;
+		}
+
+		$sanitized_ranges = array();
+
+		foreach ( $filtered_ranges as $filtered_range ) {
+			if ( ! is_string( $filtered_range ) ) {
+				$this->log( 'Dropping woocommerce_gateway_payfast_valid_ip_ranges entry: expected a string, got ' . gettype( $filtered_range ) . '.' );
+				continue;
+			}
+
+			$filtered_range = trim( $filtered_range );
+
+			// Drop anything that is not a range this gateway can match against, so that one bad
+			// entry cannot take the whole allowlist down with it.
+			if ( false === $this->parse_ip_range( $filtered_range ) ) {
+				$this->log( 'Dropping woocommerce_gateway_payfast_valid_ip_ranges entry: not a valid IPv4 address or range: ' . $filtered_range );
+				continue;
+			}
+
+			$sanitized_ranges[] = $filtered_range;
+		}
+
+		if ( empty( $sanitized_ranges ) ) {
+			$this->log( 'Ignoring woocommerce_gateway_payfast_valid_ip_ranges: no usable range was returned.' );
+			return $valid_ranges;
+		}
+
+		return $sanitized_ranges;
+	}
+
+	/**
+	 * Get the hostnames Payfast publishes its ITN sender addresses under.
+	 *
+	 * These are the four hostnames this gateway has always resolved. They are consulted only when
+	 * an address is not in the documented list, so the set of accepted addresses stays a superset
+	 * of what resolving them alone would accept.
+	 *
+	 * @since 1.7.9
+	 *
+	 * @return string[] Hostnames to resolve, empty when the lookup has been switched off.
+	 */
+	public function get_valid_ip_hostnames() {
+		$valid_hostnames = array(
 			'www.payfast.co.za',
 			'sandbox.payfast.co.za',
 			'w1w.payfast.co.za',
 			'w2w.payfast.co.za',
 		);
 
-		$valid_ips = array();
+		/**
+		 * Filter the hostnames resolved to widen the set of accepted ITN sender addresses.
+		 *
+		 * Every entry must be a string holding a hostname; anything else is dropped. A return
+		 * value that is not an array, or one whose entries are all dropped as malformed, is
+		 * ignored in favour of the hostnames shipped with the plugin.
+		 *
+		 * These hostnames are resolved only when the documented ranges did not match, so this
+		 * filter can widen the senders that are accepted but never narrow them. Returning an
+		 * empty array switches the lookup off altogether, which is what turns the companion
+		 * filter woocommerce_gateway_payfast_valid_ip_ranges from the first pass into the whole
+		 * answer, and is the only way to restrict senders to that list alone.
+		 *
+		 * @since 1.7.9
+		 *
+		 * @param string[] $valid_hostnames Hostnames to resolve.
+		 */
+		$filtered_hostnames = apply_filters( 'woocommerce_gateway_payfast_valid_ip_hostnames', $valid_hostnames );
 
-		foreach ( $valid_hosts as $pf_hostname ) {
-			$ips = gethostbynamel( $pf_hostname );
+		if ( ! is_array( $filtered_hostnames ) ) {
+			$this->log( 'Ignoring woocommerce_gateway_payfast_valid_ip_hostnames: expected an array, got ' . gettype( $filtered_hostnames ) . '.' );
+			return $valid_hostnames;
+		}
 
-			if ( false !== $ips ) {
-				$valid_ips = array_merge( $valid_ips, $ips );
+		// An empty array is an instruction rather than a mistake: it turns the lookup off.
+		if ( empty( $filtered_hostnames ) ) {
+			return array();
+		}
+
+		$sanitized_hostnames = array();
+
+		foreach ( $filtered_hostnames as $filtered_hostname ) {
+			if ( ! is_string( $filtered_hostname ) ) {
+				$this->log( 'Dropping woocommerce_gateway_payfast_valid_ip_hostnames entry: expected a string, got ' . gettype( $filtered_hostname ) . '.' );
+				continue;
+			}
+
+			$filtered_hostname = trim( $filtered_hostname );
+
+			if ( '' === $filtered_hostname || strlen( $filtered_hostname ) > 253 ) {
+				$this->log( 'Dropping woocommerce_gateway_payfast_valid_ip_hostnames entry: empty or longer than 253 characters.' );
+				continue;
+			}
+
+			if ( ! preg_match( '/^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?$/', $filtered_hostname ) ) {
+				$this->log( 'Dropping woocommerce_gateway_payfast_valid_ip_hostnames entry: not a valid hostname: ' . $filtered_hostname );
+				continue;
+			}
+
+			$sanitized_hostnames[] = $filtered_hostname;
+		}
+
+		if ( empty( $sanitized_hostnames ) ) {
+			$this->log( 'Ignoring woocommerce_gateway_payfast_valid_ip_hostnames: no usable hostname was returned.' );
+			return $valid_hostnames;
+		}
+
+		return $sanitized_hostnames;
+	}
+
+	/**
+	 * Resolve the Payfast hostnames, caching each answer briefly.
+	 *
+	 * The result can only widen the set of accepted addresses, so a lookup that fails, times out
+	 * or answers with nothing is logged and the caller carries on. Only answers are cached; a
+	 * failure is retried on the next request, so a resolver that recovers is picked up at once
+	 * rather than leaving addresses reachable only through that hostname refused in the meantime.
+	 *
+	 * @since 1.7.9
+	 *
+	 * @return string[] Resolved IPv4 addresses, possibly empty.
+	 */
+	public function get_resolved_ip_addresses() {
+		$hostnames = $this->get_valid_ip_hostnames();
+
+		if ( empty( $hostnames ) ) {
+			return array();
+		}
+
+		$resolved_ips = array();
+
+		foreach ( $hostnames as $hostname ) {
+			// Cached per hostname, so that one name answering slowly or not at all cannot decide
+			// how long another name's answer lives, and a change of filter reads no stale entry.
+			$cache_key  = 'wc_payfast_itn_sender_ips_' . md5( $hostname );
+			$cached_ips = get_transient( $cache_key );
+
+			if ( is_array( $cached_ips ) ) {
+				$resolved_ips = array_merge( $resolved_ips, $cached_ips );
+				continue;
+			}
+
+			$host_ips = gethostbynamel( $hostname );
+
+			/*
+			 * An answer is cached for roughly the order of the records' own lifetime, so the
+			 * accepted set stays at least as wide as a live lookup would make it. A failure is not
+			 * cached: it is logged and retried on the next request.
+			 */
+			if ( is_array( $host_ips ) ) {
+				$resolved_ips = array_merge( $resolved_ips, $host_ips );
+
+				set_transient( $cache_key, $host_ips, 2 * MINUTE_IN_SECONDS );
+			} else {
+				$this->log( 'Could not resolve ' . $hostname . ', skipping it for this request.' );
 			}
 		}
 
-		// Remove duplicates.
-		$valid_ips = array_unique( $valid_ips );
+		return array_values( array_unique( $resolved_ips ) );
+	}
+
+	/**
+	 * Parse an IPv4 range into the network address and prefix length it stands for.
+	 *
+	 * This is also what decides which filtered entries survive in get_valid_ip_ranges(), so a
+	 * subclass that overrides is_ip_in_range() to accept another notation has to override this
+	 * method as well. Entries written in that notation are dropped here otherwise, before the
+	 * matcher ever sees them.
+	 *
+	 * @since 1.7.9
+	 *
+	 * @param string $range IPv4 range in CIDR notation, or a bare IPv4 address for a single host.
+	 * @return array|false Network address as a long and prefix length, or false when the range is malformed.
+	 */
+	protected function parse_ip_range( $range ) {
+		if ( ! is_string( $range ) ) {
+			return false;
+		}
+
+		$range = trim( $range );
+
+		$prefix_length = 32;
+		$network       = $range;
+
+		if ( false !== strpos( $range, '/' ) ) {
+			list( $network, $prefix_length ) = explode( '/', $range, 2 );
+
+			$network       = trim( $network );
+			$prefix_length = trim( $prefix_length );
+
+			// Rejects an empty, negative or non numeric prefix, and a zero padded one: /08
+			// reads as /8 once cast, which would widen the range by a factor of a million.
+			if ( ! preg_match( '/^(0|[1-9][0-9]?)$/', $prefix_length ) ) {
+				return false;
+			}
+
+			$prefix_length = (int) $prefix_length;
+
+			if ( $prefix_length > 32 ) {
+				return false;
+			}
+		}
+
+		if ( false === filter_var( $network, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+			return false;
+		}
+
+		$network_long = ip2long( $network );
+
+		if ( false === $network_long ) {
+			return false;
+		}
+
+		return array( $network_long, $prefix_length );
+	}
+
+	/**
+	 * Check whether an IPv4 address falls inside a range.
+	 *
+	 * @since 1.7.9
+	 *
+	 * @param string $ip    IPv4 address to check.
+	 * @param string $range IPv4 range in CIDR notation, or a bare IPv4 address for a single host.
+	 * @return bool
+	 */
+	public function is_ip_in_range( $ip, $range ) {
+		if ( ! is_string( $ip ) ) {
+			return false;
+		}
+
+		$ip = trim( $ip );
+
+		// Payfast sends from IPv4 addresses only, so anything else cannot match a documented range.
+		if ( false === filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 ) ) {
+			return false;
+		}
+
+		$parsed_range = $this->parse_ip_range( $range );
+
+		if ( false === $parsed_range ) {
+			return false;
+		}
+
+		list( $network_long, $prefix_length ) = $parsed_range;
+
+		$ip_long = ip2long( $ip );
+
+		if ( false === $ip_long ) {
+			return false;
+		}
+
+		// A /0 range covers every address, and shifting by the full width of an integer is not
+		// portable, so answer that case directly. Every other prefix leaves at most 31 host bits,
+		// and dropping them from both addresses is what decides the match.
+		if ( 0 === $prefix_length ) {
+			return true;
+		}
+
+		$host_bits = 32 - $prefix_length;
+
+		return ( $ip_long >> $host_bits ) === ( $network_long >> $host_bits );
+	}
+
+	/**
+	 * Validate the IP address to make sure it's coming from Payfast.
+	 *
+	 * The address is matched against the ranges Payfast publishes for its ITN senders, which is a
+	 * wider set than the addresses currently held in DNS.
+	 *
+	 * @param string $source_ip Source IP.
+	 * @since 1.0.0
+	 * @return bool
+	 */
+	public function is_valid_ip( $source_ip ) {
+		$valid_ranges = $this->get_valid_ip_ranges();
 
 		// Adds support for X_Forwarded_For.
 		if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
@@ -1630,19 +2193,58 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 			$source_ip               = rest_is_ip_address( $x_forwarded_http_header ) ? rest_is_ip_address( $x_forwarded_http_header ) : $source_ip;
 		}
 
-		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r -- used for logging.
-		$this->log( "Valid IPs:\n" . print_r( $valid_ips, true ) );
-		$is_valid_ip = in_array( $source_ip, $valid_ips, true );
+		$this->log( 'Valid IP ranges: ' . implode( ', ', $valid_ranges ) );
+
+		$is_valid_ip = false;
+
+		foreach ( $valid_ranges as $valid_range ) {
+			if ( $this->is_ip_in_range( $source_ip, $valid_range ) ) {
+				$is_valid_ip = true;
+				break;
+			}
+		}
+
+		/*
+		 * Second chance for an address Payfast has rotated into DNS but not into its
+		 * documentation. It runs only when the range list above did not match, so with the
+		 * shipped list a notification from a documented address never waits on a resolver, and
+		 * it can only ever add addresses: a lookup that fails or answers with nothing leaves the
+		 * request refused exactly as it already was.
+		 */
+		if ( ! $is_valid_ip ) {
+			foreach ( $this->get_resolved_ip_addresses() as $resolved_ip ) {
+				if ( $this->is_ip_in_range( $source_ip, $resolved_ip ) ) {
+					$is_valid_ip = true;
+					$this->log( 'Source IP accepted from DNS, outside the valid IP ranges: ' . $resolved_ip );
+					break;
+				}
+			}
+		}
 
 		/**
 		 * Filter whether Payfast Gateway IP address is valid.
 		 *
 		 * @since 1.4.13
 		 *
-		 * @param bool $is_valid_ip Whether IP address is valid.
-		 * @param bool $source_ip   Source IP.
+		 * @param bool   $is_valid_ip Whether IP address is valid.
+		 * @param string $source_ip   Source IP.
 		 */
-		return apply_filters( 'woocommerce_gateway_payfast_is_valid_ip', $is_valid_ip, $source_ip );
+		$is_valid_ip = apply_filters( 'woocommerce_gateway_payfast_is_valid_ip', $is_valid_ip, $source_ip );
+
+		// Any callback in the chain can return something other than a boolean, and this value
+		// decides whether a payment notification is accepted, so it is normalised before use.
+		if ( ! is_bool( $is_valid_ip ) ) {
+			$this->log( 'woocommerce_gateway_payfast_is_valid_ip returned ' . gettype( $is_valid_ip ) . ', treating it as ' . ( $is_valid_ip ? 'true' : 'false' ) . '.' );
+			$is_valid_ip = (bool) $is_valid_ip;
+		}
+
+		// Logged on the final answer, so the line cannot contradict a callback that accepted the
+		// request. The reason is left out: past this point it is no longer only the range check.
+		if ( ! $is_valid_ip ) {
+			$this->log( 'Source IP refused: ' . ( is_scalar( $source_ip ) ? (string) $source_ip : gettype( $source_ip ) ) );
+		}
+
+		return $is_valid_ip;
 	}
 
 	/**
@@ -1867,7 +2469,7 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 	 */
 	public function filter_currency( $currency ) {
 		// Do nothing if WooPayments is not activated.
-		if ( ! class_exists( '\WCPay\MultiCurrency\MultiCurrency' ) ) {
+		if ( ! class_exists( '\WCPay\MultiCurrency\MultiCurrency' ) || ! is_callable( array( '\WCPay\MultiCurrency\MultiCurrency', 'instance' ) ) ) {
 			return $currency;
 		}
 
@@ -1876,20 +2478,27 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 			return $currency;
 		}
 
-		$user_id       = get_current_user_id();
-		$currency_code = null; // Initialize to avoid undefined variable notice.
+		// Do nothing if the WooPayments Multi-Currency feature is off.
+		if ( ! class_exists( 'WC_Payments_Features' ) || ! is_callable( array( 'WC_Payments_Features', 'is_customer_multi_currency_enabled' ) ) || ! WC_Payments_Features::is_customer_multi_currency_enabled() ) {
+			return $currency;
+		}
 
-		// Check if the currency is set in the URL.
-		if ( isset( $_GET['currency'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			$currency_code = sanitize_text_field(
-				wp_unslash( $_GET['currency'] ) // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-			);
-			// Check if the currency is set in the session (for logged-out users).
-		} elseif ( 0 === $user_id && WC()->session ) {
-			$currency_code = WC()->session->get( \WCPay\MultiCurrency\MultiCurrency::CURRENCY_SESSION_KEY );
-			// Check if the currency is set in the user meta (for logged-in users).
-		} elseif ( $user_id ) {
-			$currency_code = get_user_meta( $user_id, \WCPay\MultiCurrency\MultiCurrency::CURRENCY_META_KEY, true );
+		// WooPayments sets up Multi-Currency on `init`, and it calls this filter too.
+		if ( ! did_action( 'wp_loaded' ) || $this->is_filtering_currency ) {
+			return $currency;
+		}
+
+		$this->is_filtering_currency = true;
+		$currency_code               = null;
+		try {
+			$selected_currency = \WCPay\MultiCurrency\MultiCurrency::instance()->get_selected_currency();
+			if ( is_object( $selected_currency ) && is_callable( array( $selected_currency, 'get_code' ) ) ) {
+				$currency_code = $selected_currency->get_code();
+			}
+		} catch ( Throwable $e ) {
+			$currency_code = null;
+		} finally {
+			$this->is_filtering_currency = false;
 		}
 
 		if ( is_string( $currency_code ) && 'ZAR' === $currency_code ) {
@@ -1897,6 +2506,16 @@ class WC_Gateway_PayFast extends WC_Payment_Gateway {
 		}
 
 		return $currency;
+	}
+
+	/**
+	 * Check if the saved order currency is ZAR, the only currency Payfast charges in.
+	 *
+	 * @param WC_Order $order Order object.
+	 * @return bool
+	 */
+	public function is_order_currency_supported( $order ) {
+		return $order instanceof WC_Order && 'ZAR' === strtoupper( (string) $order->get_currency() );
 	}
 
 	/**

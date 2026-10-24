@@ -205,11 +205,34 @@ class OsOrdersHelper {
 
 
 	public static function generate_confirmation_message( OsOrderModel $order ): string {
+		$title = OsTranslationHelper::translate_default( OsStepsHelper::get_step_setting_value( 'confirmation', 'order_confirmation_message_title', esc_html__( 'Appointment Confirmed', 'latepoint' ) ) );
+		/**
+		 * Filters the confirmation banner title, allowing item-type-specific overrides.
+		 *
+		 * @param string       $title  The resolved title (step setting or default).
+		 * @param OsOrderModel $order  The current order.
+		 *
+		 * @since 5.7.0
+		 * @hook latepoint_order_confirmation_message_title
+		 */
+		$title = apply_filters( 'latepoint_order_confirmation_message_title', $title, $order );
+
+		$content = OsTranslationHelper::translate_default( OsStepsHelper::get_step_setting_value( 'confirmation', 'order_confirmation_message_content', esc_html__( 'We look forward to seeing you.', 'latepoint' ) ) );
+		/**
+		 * Filters the confirmation banner content/subtitle.
+		 *
+		 * @param string       $content  The resolved content (step setting or default).
+		 * @param OsOrderModel $order    The current order.
+		 *
+		 * @since 5.0.0
+		 */
+		$content = apply_filters( 'latepoint_order_confirmation_message_content', $content, $order );
+
 		$html = '<div class="summary-status-wrapper summary-status-style-' . esc_attr( OsStepsHelper::get_step_setting_value( 'confirmation', 'order_confirmation_message_style', 'green' ) ) . '">
                     <div class="summary-status-inner">
                         <div class="ss-icon"></div>
-                        <div class="ss-title">' . OsStepsHelper::get_step_setting_value( 'confirmation', 'order_confirmation_message_title', esc_html__( 'Appointment Confirmed', 'latepoint' ) ) . '</div>
-                        <div class="ss-description">' . OsStepsHelper::get_step_setting_value( 'confirmation', 'order_confirmation_message_content', esc_html__( 'We look forward to seeing you.', 'latepoint' ) ) . '</div>
+                        <div class="ss-title">' . wp_kses_post( $title ) . '</div>
+                        <div class="ss-description">' . wp_kses_post( $content ) . '</div>
                         <div class="ss-confirmation-number"><span>' . esc_html__( 'Order #', 'latepoint' ) . '</span><strong>' . esc_html( $order->confirmation_code ) . '</strong></div>
                     </div>
                 </div>';
@@ -394,7 +417,21 @@ class OsOrdersHelper {
 		$html .= '</div>';
 		$html .= '</div>';
 
-		return $html;
+		/**
+		 * The collapsed pill for a booking order item, so an add-on can present it differently.
+		 *
+		 * A replacement must keep the pill's order_items[..][id] and order_items[..][variant] hidden inputs -
+		 * the save path reads the item's id from them.
+		 *
+		 * @param {string} $html
+		 * @param {OsBookingModel} $booking
+		 * @param {string} $order_item_id
+		 * @returns {string}
+		 *
+		 * @since 5.6.12
+		 * @hook latepoint_order_item_pill_for_booking
+		 */
+		return apply_filters( 'latepoint_order_item_pill_for_booking', $html, $booking, $order_item_id );
 	}
 
 	public static function generate_order_item_pill_for_bundle_booking( OsBookingModel $booking, $order_item_id ): string {
@@ -521,8 +558,16 @@ class OsOrdersHelper {
 	}
 
 	public static function generate_order_items_html( OsOrderModel $order ) {
-		$html        = '';
-		$order_items = $order->get_items();
+		$html = '';
+		// Only bundle/booking items render here — other variants (e.g. event registrations) have
+		// their own separate notification system and would fatal on the booking-only assumptions
+		// below.
+		$order_items = [];
+		foreach ( $order->get_items() as $order_item ) {
+			if ( $order_item->is_bundle() || $order_item->is_booking() ) {
+				$order_items[] = $order_item;
+			}
+		}
 		$html       .= '<table style="width: 100%;">';
 		$total_items = count( $order_items );
 		$i           = 0;
@@ -563,8 +608,7 @@ class OsOrdersHelper {
 				foreach ( $bundle_bookings as $booking ) {
 					$to_emails[] = $booking->agent->get_full_name() . ' <' . $booking->agent->email . '>';
 				}
-			} else {
-				// booking
+			} elseif ( $order_item->is_booking() ) {
 				$booking     = $order_item->build_original_object_from_item_data();
 				$to_emails[] = $booking->agent->get_full_name() . ' <' . $booking->agent->email . '>';
 			}
@@ -583,8 +627,7 @@ class OsOrdersHelper {
 				foreach ( $bundle_bookings as $booking ) {
 					$full_names[] = $booking->agent->get_full_name();
 				}
-			} else {
-				// booking
+			} elseif ( $order_item->is_booking() ) {
 				$booking      = $order_item->build_original_object_from_item_data();
 				$full_names[] = $booking->agent->get_full_name();
 			}
@@ -627,7 +670,7 @@ class OsOrdersHelper {
 					$bundle_bookings = OsOrdersHelper::get_bookings_for_order_item( $order_item->id );
 					$property_values = array_merge( $property_values, array_column( $bundle_bookings, $mapped_property ) );
 				}
-			} else {
+			} elseif ( $order_item->is_booking() ) {
 				$booking = $order_item->build_original_object_from_item_data();
 				if ( ! empty( $booking->$mapped_property ) ) {
 					$property_values[] = $booking->$mapped_property;

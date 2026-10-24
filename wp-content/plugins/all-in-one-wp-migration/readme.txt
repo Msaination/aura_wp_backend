@@ -4,7 +4,7 @@ Tags: backup, clone, migrate, move-wordpress, export-import
 Requires at least: 3.3
 Tested up to: 7.1
 Requires PHP: 5.3
-Stable tag: 7.110
+Stable tag: 7.112
 License: GPLv3 or later
 
 Trusted by 60M+ sites: The gold standard for WordPress migration and backup. Migrate, backup, and restore your WordPress site with one click.
@@ -13,6 +13,8 @@ Trusted by 60M+ sites: The gold standard for WordPress migration and backup. Mig
 **The Most Trusted WordPress Migration & Backup Plugin Since 2013**
 
 All-in-One WP Migration is the gold standard for WordPress site migration and backup, used by over 60 million websites worldwide - from small blogs to Fortune 500 companies and government agencies. Whether you need to migrate WordPress to a new host, create a full site backup, or restore a previous backup, our plugin offers enterprise-grade reliability with beginner-friendly simplicity.
+
+**Free vs. paid, plainly:** The free plugin backs up and exports sites of any size. To restore for free, download your backup file and import it on the Import screen. Your hosting company decides how large a file you can upload, so a very large backup may not go through that way. The paid [Unlimited Extension](https://servmask.com/products/unlimited-extension) adds one-click Restore from the Backups page and uploads that get around your host's file-size restrictions. That is how we fund the free plugin.
 
 **Why Choose All-in-One WP Migration?**
 
@@ -38,13 +40,13 @@ All-in-One WP Migration is the gold standard for WordPress site migration and ba
 * **PHP 5.3-8.4 Compatibility**: Works across virtually all hosting environments
 * **Custom WPress Format**: Our optimized archive format ensures data integrity
 * **Hook System**: Extensive API for custom integration and workflows
-* **Command-Line Support**: Automate migrations and backups via WP-CLI
 
 **Premium Extensions:**
 
 Enhance your migration and backup workflow with our [premium extensions](https://servmask.com/products):
 
-* **Unlimited Migration Size**: Migrate sites of any size with no file limits
+* **[Unlimited Extension](https://servmask.com/products/unlimited-extension)**: One-click restore from your Backups page, plus uploads that get around your host's file-size restrictions
+* **WP-CLI Commands** (Unlimited Extension): Automate backups and restores from the command line with `wp ai1wm backup` and `wp ai1wm restore`
 * **Cloud Backup & Migration**: Backup and migrate directly to/from Dropbox, Google Drive, OneDrive, and more
 * **Multisite Migration**: Migrate complex WordPress multisite networks
 * **Scheduled Backups**: Automated, recurring WordPress backups on your schedule
@@ -105,6 +107,12 @@ Alternatively, you can download the plugin using the download button on this pag
 
 == Frequently Asked Questions ==
 
+= Is restoring free? =
+
+Yes, with one thing to know. Download your backup, then go to **All-in-One WP Migration > Import** and upload it. Your hosting company decides how large a file you can upload - the Import screen shows that number, and we have no say in it. If your backup is bigger than that, your host can usually help, or you can follow our [guide to uploading larger backups](https://help.servmask.com/2018/10/27/how-to-increase-maximum-upload-file-size-in-wordpress/).
+
+If you would rather skip the file-size question entirely, the paid [Unlimited Extension](https://servmask.com/products/unlimited-extension) adds one-click Restore from the Backups page and uploads that get around your host's restrictions. That is how we fund the free plugin.
+
 = How do I migrate my WordPress site to a new host? =
 
 Install All-in-One WP Migration on your current site and click **Export**. The plugin creates a single `.wpress` file containing your entire WordPress site - database, media, themes, and plugins. Then install a fresh copy of WordPress on your new host, install the plugin there as well, and use the **Import** feature to upload the `.wpress` file. The plugin will migrate everything automatically, including updating all URL references and handling serialized data safely. You can migrate between any hosting providers - from shared hosting to dedicated servers.
@@ -123,7 +131,7 @@ Yes. The [Multisite Extension](https://servmask.com/products) allows you to migr
 
 = What if my backup file exceeds the upload size limit? =
 
-If your server rejects a backup file as too large during import, you have several options. You can increase the PHP upload limit by adding `php_value upload_max_filesize 512M` and `php_value post_max_size 512M` to your `.htaccess` file, or set `client_max_body_size 512m` for Nginx servers. For sites that require unlimited upload size, the [Unlimited Extension](https://servmask.com/products) removes all file size restrictions set by your host.
+The upload limit is set by your hosting company, not by the plugin (see "Is restoring free?" above). If you are comfortable editing server configuration, you can raise the PHP upload limit by adding `php_value upload_max_filesize 512M` and `php_value post_max_size 512M` to your `.htaccess` file, or set `client_max_body_size 512m` for Nginx servers. Some hosts override these settings, so if the change does not take effect, ask your host. The paid [Unlimited Extension](https://servmask.com/products/unlimited-extension) works around host file size restrictions without any server changes.
 
 = How do I migrate a WooCommerce store? =
 
@@ -141,7 +149,7 @@ The most common issues after you migrate and their solutions:
 * **Database connection error**: Check that `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and `DB_HOST` in `wp-config.php` match your new server's settings.
 * **404 errors on all pages**: Re-save permalinks under **Settings > Permalinks** to regenerate rewrite rules.
 * **Broken images**: Verify the `wp-content/uploads/` directory transferred completely with correct permissions (755 for directories, 644 for files).
-* **Import stuck or frozen**: Increase PHP `max_execution_time` and `memory_limit`, or use WP-CLI to migrate from the command line: `wp ai1wm restore backup.wpress`.
+* **Import stuck or frozen**: Increase PHP `max_execution_time` and `memory_limit`. With the Unlimited Extension, you can also restore from the command line via WP-CLI: `wp ai1wm restore backup.wpress`.
 
 For a comprehensive list of migration troubleshooting tips, see our [migration troubleshooting guide](https://blog.servmask.com/wordpress-migration-troubleshooting/).
 
@@ -151,7 +159,7 @@ Yes, All-in-One WP Migration supports cross-database migration between MySQL, Ma
 
 = Can I automate my backups and migrations using WP-CLI? =
 
-Yes. All-in-One WP Migration includes full WP-CLI support for command-line automation. Use `wp ai1wm backup` to create a backup and `wp ai1wm restore backup.wpress` to restore or migrate from a backup file. This is ideal for developers who need to migrate sites in automated workflows, CI/CD pipelines, or scheduled backup scripts. Combined with cron jobs, WP-CLI lets you automate your entire backup strategy without touching the WordPress dashboard.
+Yes, with the [Unlimited Extension](https://servmask.com/products/unlimited-extension). WP-CLI commands are not included in the free plugin - running them without the extension only prints a notice. With the extension installed, use `wp ai1wm backup` to create a backup and `wp ai1wm restore backup.wpress` to restore or migrate from a backup file. This is ideal for developers who need to migrate sites in automated workflows, CI/CD pipelines, or scheduled backup scripts. Combined with cron jobs, WP-CLI lets you automate your entire backup strategy without touching the WordPress dashboard.
 
 == Screenshots ==
 1. Mobile Export page
@@ -164,6 +172,27 @@ All-in-One WP Migration is in full compliance with General Data Protection Regul
 See our [GDPR Compliant Privacy Policy here](https://www.iubenda.com/privacy-policy/946881).
 
 == Changelog ==
+= 7.112 =
+
+**Fixed**
+
+* Scheduled backups stopping without an error on hosts that limit concurrent requests
+* Exported databases with empty binary or blob values could not be read by tools outside the plugin
+
+= 7.111 =
+
+**Security**
+
+* Export and import now require the administrator capability. This closes a missing-authorization issue that allowed authenticated users without administrator privileges to run migrations. Credits to Charles Vosburgh for reporting it
+* Backup actions (list, delete, label, browse, and download) are now restricted to users who can export or import
+* HTTP authentication credentials are no longer captured for users who lack permission to run a migration. Credits to Jakub Herman for reporting it
+* Backup list, archive browser, and downloads now fail closed with a clear error when the session has expired, instead of failing silently
+
+**Fixed**
+
+* Export REST route no longer accepts malformed find-and-replace pairs (previously ignored silently)
+* SQLite export no longer removes the substring STRICT from column names that contain it
+
 = 7.110 =
 **Fixed**
 

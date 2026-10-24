@@ -177,6 +177,26 @@ class OsCartModel extends OsModel {
 		return ! $this->get_items();
 	}
 
+	public function contains_event_registration(): bool {
+		foreach ( $this->get_items() as $cart_item ) {
+			if ( $cart_item->is_event_registration() ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	public function contains_booking_or_bundle(): bool {
+		foreach ( $this->get_items() as $cart_item ) {
+			if ( $cart_item->is_booking() || $cart_item->is_bundle() ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 
 	public function delete_meta_by_key( $meta_key ) {
 		if ( $this->is_new_record() ) {
@@ -435,6 +455,16 @@ class OsCartModel extends OsModel {
 
 	public function get_total_formatted() {
 		return OsMoneyHelper::format_price( $this->get_total(), true, false );
+	}
+
+	public function prepare_data_before_it_is_set( $data ) {
+		// payment_portion is mass assignable - a 'deposit' portion on a cart with no deposit due
+		// charges zero while the order is recorded at full price. Only honour it when a deposit exists.
+		if ( isset( $data['payment_portion'] ) && LATEPOINT_PAYMENT_PORTION_DEPOSIT === $data['payment_portion'] && $this->deposit_amount_to_charge() <= 0 ) {
+			$data['payment_portion'] = LATEPOINT_PAYMENT_PORTION_FULL;
+		}
+
+		return $data;
 	}
 
 	public function set_payment_portion() {

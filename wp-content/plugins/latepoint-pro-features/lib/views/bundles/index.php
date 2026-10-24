@@ -44,7 +44,7 @@
         <?php endforeach; ?>
 
 	      <?php if(OsRolesHelper::can_user('bundle__create')){ ?>
-		      <?php echo OsUtilHelper::add_resource_link_html(__('New Bundle', 'latepoint-pro-features'), OsRouterHelper::build_link(OsRouterHelper::build_route_name('bundles', 'new_form') )); ?>
+		      <?php echo OsUtilHelper::add_resource_link_html(__('New Package', 'latepoint-pro-features'), OsRouterHelper::build_link(OsRouterHelper::build_route_name('bundles', 'new_form') )); ?>
 	      <?php } ?>
       </div>
     </div>
@@ -54,7 +54,7 @@
     <h2><?php _e('No Bundles Found', 'latepoint-pro-features'); ?></h2>
     <a href="<?php echo OsRouterHelper::build_link(OsRouterHelper::build_route_name('bundles', 'new_form') ) ?>" class="latepoint-btn">
       <i class="latepoint-icon latepoint-icon-plus-square"></i>
-      <span><?php _e('New Bundle', 'latepoint-pro-features'); ?></span>
+      <span><?php _e('New Package', 'latepoint-pro-features'); ?></span>
     </a>
   </div>
 <?php } ?>

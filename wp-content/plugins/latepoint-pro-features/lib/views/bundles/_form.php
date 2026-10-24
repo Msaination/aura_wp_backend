@@ -163,7 +163,7 @@
                 data-os-redirect-to="' . OsRouterHelper::build_link(OsRouterHelper::build_route_name('bundles', 'index')) . '"
                 data-os-params="' . OsUtilHelper::build_os_params(['id' => $bundle->id], 'latepoint_destroy_bundle_' . $bundle->id) . '"
                 data-os-success-action="redirect"
-                data-os-action="' . OsRouterHelper::build_route_name('bundles', 'destroy') . '">' . __('Delete Bundle', 'latepoint-pro-features') . '</a>';
+                data-os-action="' . OsRouterHelper::build_route_name('bundles', 'destroy') . '">' . __('Delete Package', 'latepoint-pro-features') . '</a>';
 				}
 				if (OsRolesHelper::can_user('bundle__edit')) {
 					echo OsFormHelper::button('submit', __('Save Bundle', 'latepoint-pro-features'), 'submit', ['class' => 'latepoint-btn']);

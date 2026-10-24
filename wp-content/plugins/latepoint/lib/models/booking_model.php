@@ -28,7 +28,6 @@ class OsBookingModel extends OsModel {
 		$total_attendees             = 1,
 		$total_attendees_sum         = 1,
 		$total_customers             = 1,
-		$service_extras              = [],
 		$cart_item_id                = null,
 		$order_item_id,
 		$server_timezone,
@@ -181,8 +180,6 @@ class OsBookingModel extends OsModel {
 			'buffer_before'               => $this->buffer_before,
 			'buffer_after'                => $this->buffer_after,
 			'duration'                    => $this->duration,
-			'total_attendees'             => (int) $this->total_attendees,
-			'service_extras'              => is_array( $this->service_extras ) ? $this->service_extras : [],
 			'generate_recurrent_sequence' => $this->generate_recurrent_sequence,
 		];
 
@@ -271,7 +268,9 @@ class OsBookingModel extends OsModel {
 	}
 
 	public function set_utc_datetimes( bool $save = false ) {
-		if ( empty( $this->start_date ) || empty( $this->end_date ) || empty( $this->start_time ) || empty( $this->end_time ) ) {
+		// if ( empty( $this->start_date ) || empty( $this->end_date ) || empty( $this->start_time ) || empty( $this->end_time ) ) {
+		// times are minutes from midnight, so 0 (midnight) is a valid value and must not be treated as unset
+		if ( empty( $this->start_date ) || empty( $this->end_date ) || is_null( $this->start_time ) || $this->start_time === '' || is_null( $this->end_time ) || $this->end_time === '' ) {
 			return;
 		}
 		$this->start_datetime_utc = $this->get_start_datetime( 'UTC' )->format( LATEPOINT_DATETIME_DB_FORMAT );
@@ -1269,6 +1268,21 @@ class OsBookingModel extends OsModel {
 		return $this->image_id;
 	}
 
+	public function prepare_data_before_it_is_set( $data ) {
+		// These fields are always scalar. A nested array here is never legitimate and can
+		// reach the ORM as attacker-controlled SQL — drop it. (Scalar 'any' values for
+		// agent_id/location_id are preserved, unlike a blanket absint().)
+		$scalar_fields = [ 'service_id', 'agent_id', 'location_id', 'customer_id', 'duration', 'total_attendees', 'buffer_before', 'buffer_after', 'order_item_id', 'recurrence_id' ];
+		if ( is_array( $data ) ) {
+			foreach ( $scalar_fields as $field ) {
+				if ( isset( $data[ $field ] ) && is_array( $data[ $field ] ) ) {
+					unset( $data[ $field ] );
+				}
+			}
+		}
+		return $data;
+	}
+
 	protected function allowed_params( $role = 'admin' ) {
 		$allowed_params = array(
 			'service_id',
@@ -1288,7 +1302,6 @@ class OsBookingModel extends OsModel {
 			'total_attendees',
 			'total_attendees_sum',
 			'total_customers',
-			'service_extras',
 			'cart_item_id',
 			'order_item_id',
 			'status',

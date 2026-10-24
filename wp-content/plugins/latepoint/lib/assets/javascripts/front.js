@@ -2,12 +2,14 @@
  * Copyright (c) 2022 LatePoint LLC. All rights reserved.
  */
 // @codekit-prepend "bin/time.js"
+// @codekit-prepend "bin/phone_field.js"
 // @codekit-prepend "bin/shared.js"
 // @codekit-prepend "bin/notifications.js";
 // @codekit-prepend "bin/actions.js"
 // @codekit-prepend "bin/front/main.js"
 // @codekit-prepend "bin/front/_customer.js"
 // @codekit-prepend "bin/front/_events.js"
+// @codekit-prepend "bin/front/_events_manager.js"
 // @codekit-prepend "bin/front/_stripe_connect.js"
 // @codekit-prepend "bin/front/_paypal_connect.js"
 // @codekit-prepend "bin/front/_razorpay_connect.js"

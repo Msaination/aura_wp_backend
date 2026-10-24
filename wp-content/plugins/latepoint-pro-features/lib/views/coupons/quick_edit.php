@@ -122,7 +122,7 @@
                         </select>
                         <?php echo OsFormHelper::hidden_field( 'coupon[rules][customer_ids]', implode( ',', $coupon_selected_customer_ids ), [ 'skip_id' => true ] ); ?>
                     </div>
-                    <?php echo OsFormHelper::multi_select_field('coupon[rules][bundle_ids]', __('Bundles', 'latepoint-pro-features'),OsFormHelper::model_options_for_multi_select('bundle'), explode(',', $coupon->get_rule('bundle_ids', ''))); ?>
+                    <?php echo OsFormHelper::multi_select_field('coupon[rules][bundle_ids]', __('Packages', 'latepoint-pro-features'),OsFormHelper::model_options_for_multi_select('bundle'), explode(',', $coupon->get_rule('bundle_ids', ''))); ?>
                 </div>
             </div>
             <div class="os-form-sub-header">

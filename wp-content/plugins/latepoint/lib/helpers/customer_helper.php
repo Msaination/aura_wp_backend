@@ -252,14 +252,10 @@ class OsCustomerHelper {
 	}
 
 	public static function create_wp_user_for_customer( $customer ) {
-		// NO connected wp user, create one
-		// check if wp user with this customer email already exists
+		// Match by email only - matching by user_login would allow linking to a mismatched account.
 		$wp_user_id = email_exists( $customer->email );
-		if ( ! $wp_user_id ) {
-			$wp_user_id = username_exists( $customer->email );
-		}
 		if ( $wp_user_id ) {
-			// wp user with this email or username exists
+			// wp user with this email exists
 			if ( ! self::is_wp_user_safe_for_customer_link( $wp_user_id ) ) {
 				// Do not link to privileged WP accounts (admin, editor, etc.)
 				$customer->add_error( 'privileged_user', __( 'Cannot link to a privileged WordPress account.', 'latepoint' ) );
@@ -289,7 +285,9 @@ class OsCustomerHelper {
 				'user_pass'  => $customer->password,
 			];
 
-			$default_role = OsSettingsHelper::get_default_wp_role_for_new_customers();
+			// Defense in depth: run the stored role through the same contract enforced on save,
+			// so a settings row poisoned before this patch can't provision a privileged account.
+			$default_role = OsSettingsHelper::enforce_value_contract( 'default_wp_role_for_customer', OsSettingsHelper::get_default_wp_role_for_new_customers() );
 			if ( wp_roles()->is_role( $default_role ) ) {
 				$userdata['role'] = $default_role;
 			}

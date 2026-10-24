@@ -807,6 +807,9 @@ class OsFormHelper {
 			$validate_html = '';
 		}
 		unset( $atts['validate'] );
+		// optional hover tooltip rendered next to the label, e.g. explaining a field's blank/0 behavior
+		$tooltip = $atts['tooltip'] ?? '';
+		unset( $atts['tooltip'] );
 		$html = '';
 		if ( ! empty( $wrapper_atts ) ) {
 			$html = '<div ' . self::atts_string_from_array( $wrapper_atts ) . '>';
@@ -814,7 +817,11 @@ class OsFormHelper {
 		$html       .= '<div class ="os-form-group os-form-textfield-group' . esc_attr( $extra_class ) . '" ' . self::atts_string_from_array( $form_group_atts ) . '>';
 		$placeholder = ( ! empty( $atts['placeholder'] ) ) ? $atts['placeholder'] : $label;
 		if ( $label ) {
-			$html .= '<label for="' . esc_attr( $atts['id'] ) . '">' . esc_html( $label ) . '</label>';
+			$html .= '<label for="' . esc_attr( $atts['id'] ) . '">' . esc_html( $label );
+			if ( $tooltip ) {
+				$html .= ' <i class="latepoint-icon latepoint-icon-info os-label-tooltip-icon" data-late-tooltip="' . esc_attr( $tooltip ) . '"></i>';
+			}
+			$html .= '</label>';
 		}
 		$input_class = 'os-form-control';
 		$html       .= '<input ' . $validate_html . ' type="' . esc_attr( ( $atts['type'] ?? 'text' ) ) . '" placeholder="' . esc_attr( $placeholder ) . '" name="' . esc_attr( $name ) . '" value="' . esc_attr( $value ) . '" ' . self::atts_string_from_array( $atts, [ 'class' => $input_class ] ) . '/>';
@@ -855,6 +862,26 @@ class OsFormHelper {
 		}
 
 		return self::text_field( $name, $label, $value, $atts, $wrapper_atts, $form_group_atts );
+	}
+
+	/**
+	 * Translated UI strings for the v29 intl-tel-input build's uiTranslations option
+	 * (country search box, ARIA labels). Only a subset of the library's uiTranslations keys -
+	 * missing keys (e.g. the pluralized search result count) fall back to the library's own
+	 * English default. Literal ${countryName} / ${dialCode} tokens are substituted by the
+	 * library itself at runtime and must stay intact.
+	 *
+	 * @return array
+	 */
+	public static function phone_field_i18n() {
+		return [
+			'selectedCountryAriaLabel' => __( 'Change country for phone number, currently selected ${countryName} (${dialCode})', 'latepoint' ),
+			'noCountrySelected'        => __( 'Select country for phone number', 'latepoint' ),
+			'countryListAriaLabel'     => __( 'List of countries', 'latepoint' ),
+			'searchPlaceholder'        => __( 'Search', 'latepoint' ),
+			'clearSearchAriaLabel'     => __( 'Clear search', 'latepoint' ),
+			'searchEmptyState'         => __( 'No results found', 'latepoint' ),
+		];
 	}
 
 

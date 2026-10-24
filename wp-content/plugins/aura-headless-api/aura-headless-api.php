@@ -44,6 +44,16 @@ final class Aura_Headless_API {
 
 		register_rest_route(
 			self::REST_NAMESPACE,
+			'/packages',
+			array(
+				'methods'             => WP_REST_Server::READABLE,
+				'callback'            => array( self::class, 'get_bundles' ),
+				'permission_callback' => '__return_true',
+			)
+		);
+
+		register_rest_route(
+			self::REST_NAMESPACE,
 			'/payment-methods',
 			array(
 				'methods'             => WP_REST_Server::READABLE,
@@ -252,7 +262,7 @@ final class Aura_Headless_API {
 		$response = rest_ensure_response(
 			array(
 				'bundles' => array_map( array( self::class, 'map_bundle' ), $bundles ),
-				'total'   => count( $bundles ),
+				'packages' => array_map( array( self::class, 'map_bundle' ), $bundles ),				'total'   => count( $bundles ),
 			)
 		);
 		$response->header( 'Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600' );

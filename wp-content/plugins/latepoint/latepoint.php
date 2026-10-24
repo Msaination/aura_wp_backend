@@ -2,7 +2,7 @@
 /**
  * Plugin Name: LatePoint
  * Description: Appointment Scheduling Software for WordPress
- * Version: 5.6.11
+ * Version: 5.7.5
  * Author: LatePoint
  * Author URI: https://latepoint.com
  * Plugin URI: https://latepoint.com
@@ -29,8 +29,8 @@ if ( ! class_exists( 'LatePoint' ) ) :
 		 * LatePoint version.
 		 *
 		 */
-		public $version    = '5.6.11';
-		public $db_version = '2.3.2';
+		public $version    = '5.7.5';
+		public $db_version = '2.3.4';
 
 		/**
 		 * LatePoint Constructor.
@@ -271,7 +271,7 @@ if ( ! class_exists( 'LatePoint' ) ) :
 			}
 
 			if ( ! defined( 'LATEPOINT_UPGRADE_URL' ) ) {
-				define( 'LATEPOINT_UPGRADE_URL', 'https://latepoint.com/upgrade-from-wp' );
+				define( 'LATEPOINT_UPGRADE_URL', 'https://latepoint.com/pricing/' );
 			}
 			if ( ! defined( 'LATEPOINT_SERVICE_POST_TYPE' ) ) {
 				define( 'LATEPOINT_SERVICE_POST_TYPE', 'latepoint_service' );
@@ -584,6 +584,62 @@ if ( ! class_exists( 'LatePoint' ) ) :
 			if ( ! defined( 'LATEPOINT_ITEM_VARIANT_BUNDLE' ) ) {
 				define( 'LATEPOINT_ITEM_VARIANT_BUNDLE', 'bundle' );
 			}
+			if ( ! defined( 'LATEPOINT_ITEM_VARIANT_EVENT_REGISTRATION' ) ) {
+				define( 'LATEPOINT_ITEM_VARIANT_EVENT_REGISTRATION', 'event_registration' );
+			}
+
+			// Events tables.
+			if ( ! defined( 'LATEPOINT_TABLE_EVENTS' ) ) {
+				define( 'LATEPOINT_TABLE_EVENTS', $wpdb->prefix . 'latepoint_events' );
+			}
+			if ( ! defined( 'LATEPOINT_TABLE_EVENT_CATEGORIES' ) ) {
+				define( 'LATEPOINT_TABLE_EVENT_CATEGORIES', $wpdb->prefix . 'latepoint_event_categories' );
+			}
+			if ( ! defined( 'LATEPOINT_TABLE_EVENT_REGISTRATIONS' ) ) {
+				define( 'LATEPOINT_TABLE_EVENT_REGISTRATIONS', $wpdb->prefix . 'latepoint_event_registrations' );
+			}
+			if ( ! defined( 'LATEPOINT_TABLE_EVENT_META' ) ) {
+				define( 'LATEPOINT_TABLE_EVENT_META', $wpdb->prefix . 'latepoint_event_meta' );
+			}
+			if ( ! defined( 'LATEPOINT_TABLE_EVENT_DATES' ) ) {
+				define( 'LATEPOINT_TABLE_EVENT_DATES', $wpdb->prefix . 'latepoint_event_dates' );
+			}
+
+			// Event status constants.
+			if ( ! defined( 'LATEPOINT_EVENT_STATUS_DRAFT' ) ) {
+				define( 'LATEPOINT_EVENT_STATUS_DRAFT', 'draft' );
+			}
+			if ( ! defined( 'LATEPOINT_EVENT_STATUS_PUBLISHED' ) ) {
+				define( 'LATEPOINT_EVENT_STATUS_PUBLISHED', 'published' );
+			}
+			if ( ! defined( 'LATEPOINT_EVENT_STATUS_CANCELLED' ) ) {
+				define( 'LATEPOINT_EVENT_STATUS_CANCELLED', 'cancelled' );
+			}
+			if ( ! defined( 'LATEPOINT_EVENT_STATUS_COMPLETED' ) ) {
+				define( 'LATEPOINT_EVENT_STATUS_COMPLETED', 'completed' );
+			}
+
+			// Event type constants.
+			if ( ! defined( 'LATEPOINT_EVENT_TYPE_IN_PERSON' ) ) {
+				define( 'LATEPOINT_EVENT_TYPE_IN_PERSON', 'in_person' );
+			}
+			if ( ! defined( 'LATEPOINT_EVENT_TYPE_ONLINE' ) ) {
+				define( 'LATEPOINT_EVENT_TYPE_ONLINE', 'online' );
+			}
+
+			// Event registration status constants.
+			if ( ! defined( 'LATEPOINT_EVENT_REGISTRATION_STATUS_PENDING' ) ) {
+				define( 'LATEPOINT_EVENT_REGISTRATION_STATUS_PENDING', 'pending' );
+			}
+			if ( ! defined( 'LATEPOINT_EVENT_REGISTRATION_STATUS_CONFIRMED' ) ) {
+				define( 'LATEPOINT_EVENT_REGISTRATION_STATUS_CONFIRMED', 'confirmed' );
+			}
+			if ( ! defined( 'LATEPOINT_EVENT_REGISTRATION_STATUS_CANCELLED' ) ) {
+				define( 'LATEPOINT_EVENT_REGISTRATION_STATUS_CANCELLED', 'cancelled' );
+			}
+			if ( ! defined( 'LATEPOINT_EVENT_REGISTRATION_STATUS_CHECKED_IN' ) ) {
+				define( 'LATEPOINT_EVENT_REGISTRATION_STATUS_CHECKED_IN', 'checked_in' );
+			}
 
 			if ( ! defined( 'LATEPOINT_DEFAULT_TIMEBLOCK_INTERVAL' ) ) {
 				define( 'LATEPOINT_DEFAULT_TIMEBLOCK_INTERVAL', 30 );
@@ -776,6 +832,9 @@ if ( ! class_exists( 'LatePoint' ) ) :
 			include_once LATEPOINT_ABSPATH . 'lib/controllers/manage_booking_by_key_controller.php';
 			include_once LATEPOINT_ABSPATH . 'lib/controllers/manage_order_by_key_controller.php';
 			include_once LATEPOINT_ABSPATH . 'lib/controllers/events_controller.php';
+			include_once LATEPOINT_ABSPATH . 'lib/controllers/events_manager_controller.php';
+			include_once LATEPOINT_ABSPATH . 'lib/controllers/event_registrations_controller.php';
+			include_once LATEPOINT_ABSPATH . 'lib/controllers/event_categories_controller.php';
 			include_once LATEPOINT_ABSPATH . 'lib/controllers/stripe_connect_controller.php';
 			include_once LATEPOINT_ABSPATH . 'lib/controllers/paypal_connect_controller.php';
 			include_once LATEPOINT_ABSPATH . 'lib/controllers/razorpay_connect_controller.php';
@@ -799,6 +858,11 @@ if ( ! class_exists( 'LatePoint' ) ) :
 			include_once LATEPOINT_ABSPATH . 'lib/models/service_model.php';
 			include_once LATEPOINT_ABSPATH . 'lib/models/connector_model.php';
 			include_once LATEPOINT_ABSPATH . 'lib/models/service_category_model.php';
+			include_once LATEPOINT_ABSPATH . 'lib/models/event_meta_model.php';
+			include_once LATEPOINT_ABSPATH . 'lib/models/event_category_model.php';
+			include_once LATEPOINT_ABSPATH . 'lib/models/event_model.php';
+			include_once LATEPOINT_ABSPATH . 'lib/models/event_registration_model.php';
+			include_once LATEPOINT_ABSPATH . 'lib/models/event_date_model.php';
 			include_once LATEPOINT_ABSPATH . 'lib/models/customer_model.php';
 			include_once LATEPOINT_ABSPATH . 'lib/models/settings_model.php';
 			include_once LATEPOINT_ABSPATH . 'lib/models/booking_model.php';
@@ -841,6 +905,8 @@ if ( ! class_exists( 'LatePoint' ) ) :
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/menu_helper.php';
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/image_helper.php';
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/events_helper.php';
+			include_once LATEPOINT_ABSPATH . 'lib/helpers/events_manager_helper.php';
+			include_once LATEPOINT_ABSPATH . 'lib/helpers/events_hooks_helper.php';
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/icalendar_helper.php';
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/version_specific_updates_helper.php';
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/plugin_version_update_helper.php';
@@ -852,6 +918,7 @@ if ( ! class_exists( 'LatePoint' ) ) :
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/booking_helper.php';
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/order_intent_helper.php';
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/activities_helper.php';
+			include_once LATEPOINT_ABSPATH . 'lib/helpers/translation_helper.php';
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/settings_helper.php';
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/customer_helper.php';
 			include_once LATEPOINT_ABSPATH . 'lib/helpers/customer_import_helper.php';
@@ -1106,6 +1173,7 @@ if ( ! class_exists( 'LatePoint' ) ) :
 
 			OsActivitiesHelper::init_hooks();
 			OsProcessJobsHelper::init_hooks();
+			OsEventsHooksHelper::init_hooks();
 
 			// Initialize NPS Survey.
 			OsNpsSurveyHelper::get_instance();
@@ -1172,7 +1240,7 @@ if ( ! class_exists( 'LatePoint' ) ) :
 		function add_upgrade_link( $links, $plugin_file ) {
 			if ( plugin_basename( __FILE__ ) == $plugin_file ) {
 				if ( apply_filters( 'latepoint_show_upgrade_link_on_plugins_page', true, $plugin_file ) ) {
-					$custom_link = '<a class="latepoint-plugin-upgrade-premium-link" href="' . LATEPOINT_UPGRADE_URL . '">' . esc_html__( 'Get LatePoint Pro', 'latepoint' ) . '</a>';
+					$custom_link = '<a target="_blank" class="latepoint-plugin-upgrade-premium-link" href="' . esc_url( OsUtilHelper::get_upgrade_url( 'plugins_page' ) ) . '">' . esc_html__( 'Get LatePoint Pro', 'latepoint' ) . '</a>';
 					$links[]     = $custom_link;
 				}
 			}
@@ -1396,14 +1464,79 @@ if ( ! class_exists( 'LatePoint' ) ) :
 		 * Register a custom menu page.
 		 */
 		function init_menus() {
+
+			$capability = OsAuthHelper::get_current_user()->wp_capability ?? 'manage_options';
+
 			// link for admins
 			add_menu_page(
 				OsSettingsHelper::get_brand_name(),
 				OsSettingsHelper::get_brand_name(),
-				OsAuthHelper::get_current_user()->wp_capability,
+				$capability,
 				'latepoint',
 				[ $this, 'route_call' ],
 				apply_filters( 'latepoint_admin_menu_icon', 'none' )
+			);
+			$this->init_sub_menus();
+		}
+
+		/**
+		 * Mirrors the shortlisted sections in the sidebar fly out, plus an Upgrade nudge on free installs.
+		 */
+		function init_sub_menus() {
+			$capability    = OsAuthHelper::get_current_user()->wp_capability ?? 'manage_options';
+			$admin_url     = admin_url();
+			$allowed_items = OsMenuHelper::get_sub_menu_item_ids();
+
+			foreach ( OsMenuHelper::get_side_menu_items() as $menu_item ) {
+				// Separators carry no id, so the shortlist check drops them too.
+				if ( ! in_array( $menu_item['id'] ?? '', $allowed_items, true ) || empty( $menu_item['link'] ) ) {
+					continue;
+				}
+
+				// Dashboard takes the parent slug, replacing the duplicate WordPress adds - a bare
+				// page=latepoint already routes to dashboard__index, see route_call().
+				$slug = ( 'dashboard' === $menu_item['id'] )
+					? 'latepoint'
+					: str_replace( $admin_url, '', $menu_item['link'] );
+
+				$menu_title = esc_html( $menu_item['label'] );
+				if ( ! empty( $menu_item['is_new'] ) ) {
+					$menu_title .= OsMenuHelper::get_new_menu_badge_html();
+				}
+
+				add_submenu_page( 'latepoint', $menu_item['label'], $menu_title, $capability, $slug );
+			}
+
+			$this->add_upgrade_sub_menu_item( $capability );
+		}
+
+		/**
+		 * add_submenu_page() rejects external URLs, so the Upgrade item is pushed onto the submenu
+		 * global directly. Its fifth element becomes CSS classes on the <li>.
+		 *
+		 * @param string $capability capability needed to see the item.
+		 */
+		function add_upgrade_sub_menu_item( string $capability ) {
+			/**
+			 * Upgrade item in the WordPress admin sidebar
+			 *
+			 * @hook latepoint_show_upgrade_link_in_admin_menu
+			 *
+			 * @param {bool} $show_upgrade false once Pro is active, White Label also switches it off
+			 * @returns {bool} whether to render the Upgrade item
+			 */
+			if ( ! apply_filters( 'latepoint_show_upgrade_link_in_admin_menu', ! class_exists( 'LatePointAddonProFeatures' ) ) ) {
+				return;
+			}
+
+			$label = esc_html__( 'Upgrade', 'latepoint' );
+
+			$GLOBALS['submenu']['latepoint'][] = array(
+				$label,
+				$capability,
+				OsUtilHelper::get_upgrade_url( 'admin_menu' ),
+				$label,
+				'latepoint-upgrade-menu-item',
 			);
 		}
 
@@ -1513,6 +1646,8 @@ if ( ! class_exists( 'LatePoint' ) ) :
 				'start_from_order_intent_key'           => OsRouterHelper::get_request_param( 'latepoint_order_intent_key' ) ? OsRouterHelper::get_request_param( 'latepoint_order_intent_key' ) : '',
 				'is_enabled_show_dial_code_with_flag'   => OsSettingsHelper::is_enabled_show_dial_code_with_flag(),
 				'mask_phone_number_fields'              => OsSettingsHelper::is_on( 'mask_phone_number_fields', LATEPOINT_VALUE_ON ),
+				'phone_country_name_locale'             => str_replace( '_', '-', get_locale() ),
+				'phone_i18n'                            => OsFormHelper::phone_field_i18n(),
 				'msg_validation_presence'               => __( 'can not be blank', 'latepoint' ),
 				'msg_validation_presence_checkbox'      => __( 'has to be checked', 'latepoint' ),
 				'msg_validation_invalid'                => __( 'is invalid', 'latepoint' ),
@@ -1607,7 +1742,6 @@ if ( ! class_exists( 'LatePoint' ) ) :
 				$this->version
 			);
 
-
 			$localized_vars = apply_filters( 'latepoint_localized_vars_front', $localized_vars );
 
 			wp_localize_script( 'latepoint-main-front', 'latepoint_helper', $localized_vars );
@@ -1696,6 +1830,8 @@ if ( ! class_exists( 'LatePoint' ) ) :
 				'date_format_for_js'                  => OsSettingsHelper::get_date_format_for_js(),
 				'is_enabled_show_dial_code_with_flag' => OsSettingsHelper::is_enabled_show_dial_code_with_flag(),
 				'mask_phone_number_fields'            => OsSettingsHelper::is_on( 'mask_phone_number_fields', LATEPOINT_VALUE_ON ),
+				'phone_country_name_locale'           => str_replace( '_', '-', get_locale() ),
+				'phone_i18n'                          => OsFormHelper::phone_field_i18n(),
 				'msg_validation_presence'             => __( 'can not be blank', 'latepoint' ),
 				'msg_validation_presence_checkbox'    => __( 'has to be checked', 'latepoint' ),
 				'msg_validation_invalid'              => __( 'is invalid', 'latepoint' ),

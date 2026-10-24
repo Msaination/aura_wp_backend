@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitb17eb1e8ca606ee335df408586a216cb
+class ComposerStaticInit6a14378ab276a946136982f450fb5ab9
 {
     public static $prefixLengthsPsr4 = array (
         'W' =>
@@ -281,6 +281,12 @@ class ComposerStaticInitb17eb1e8ca606ee335df408586a216cb
         'WPGraphQL\\Admin\\Extensions\\Extensions' => __DIR__ . '/../..' . '/src/Admin/Extensions/Extensions.php',
         'WPGraphQL\\Admin\\Extensions\\Registry' => __DIR__ . '/../..' . '/src/Admin/Extensions/Registry.php',
         'WPGraphQL\\Admin\\GraphiQL\\GraphiQL' => __DIR__ . '/../..' . '/src/Admin/GraphiQL/GraphiQL.php',
+        'WPGraphQL\\Admin\\SettingsReview\\AdminPage' => __DIR__ . '/../..' . '/src/Admin/SettingsReview/AdminPage.php',
+        'WPGraphQL\\Admin\\SettingsReview\\FieldFactory' => __DIR__ . '/../..' . '/src/Admin/SettingsReview/FieldFactory.php',
+        'WPGraphQL\\Admin\\SettingsReview\\RestController' => __DIR__ . '/../..' . '/src/Admin/SettingsReview/RestController.php',
+        'WPGraphQL\\Admin\\SettingsReview\\ReviewState' => __DIR__ . '/../..' . '/src/Admin/SettingsReview/ReviewState.php',
+        'WPGraphQL\\Admin\\SettingsReview\\SettingsReview' => __DIR__ . '/../..' . '/src/Admin/SettingsReview/SettingsReview.php',
+        'WPGraphQL\\Admin\\SettingsReview\\StepRegistry' => __DIR__ . '/../..' . '/src/Admin/SettingsReview/StepRegistry.php',
         'WPGraphQL\\Admin\\Settings\\Settings' => __DIR__ . '/../..' . '/src/Admin/Settings/Settings.php',
         'WPGraphQL\\Admin\\Settings\\SettingsRegistry' => __DIR__ . '/../..' . '/src/Admin/Settings/SettingsRegistry.php',
         'WPGraphQL\\Admin\\Updates\\PluginsScreenLoader' => __DIR__ . '/../..' . '/src/Admin/Updates/PluginsScreenLoader.php',
@@ -516,9 +522,9 @@ class ComposerStaticInitb17eb1e8ca606ee335df408586a216cb
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInitb17eb1e8ca606ee335df408586a216cb::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInitb17eb1e8ca606ee335df408586a216cb::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInitb17eb1e8ca606ee335df408586a216cb::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit6a14378ab276a946136982f450fb5ab9::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit6a14378ab276a946136982f450fb5ab9::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInit6a14378ab276a946136982f450fb5ab9::$classMap;
 
         }, null, ClassLoader::class);
     }

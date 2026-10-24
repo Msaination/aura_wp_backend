@@ -337,10 +337,18 @@ function ai1wm_blogs_path( $params ) {
  * Get settings.json absolute path
  *
  * @param  array  $params Request parameters
+ * @param  mixed  $prefix Filename prefix
  * @return string
  */
-function ai1wm_settings_path( $params ) {
-	return ai1wm_storage_path( $params ) . DIRECTORY_SEPARATOR . AI1WM_SETTINGS_NAME;
+function ai1wm_settings_path( $params, $prefix = '' ) {
+	// Build the file name from the base name of a clean string identifier.
+	if ( is_scalar( $prefix ) ) {
+		$prefix = ai1wm_basename( str_replace( chr( 0 ), '', strval( $prefix ) ) );
+	} else {
+		$prefix = '';
+	}
+
+	return ai1wm_storage_path( $params ) . DIRECTORY_SEPARATOR . ( empty( $prefix ) ? AI1WM_SETTINGS_NAME : sprintf( '%s.%s', $prefix, AI1WM_SETTINGS_NAME ) );
 }
 
 /**
@@ -371,9 +379,13 @@ function ai1wm_cookies_path( $params ) {
  */
 function ai1wm_error_path( $nonce ) {
 	// Build the file name from the base name of a clean string identifier.
-	$nonce = is_scalar( $nonce ) ? str_replace( chr( 0 ), '', (string) $nonce ) : '';
+	if ( is_scalar( $nonce ) ) {
+		$nonce = ai1wm_basename( str_replace( chr( 0 ), '', strval( $nonce ) ) );
+	} else {
+		$nonce = '';
+	}
 
-	return AI1WM_STORAGE_PATH . DIRECTORY_SEPARATOR . sprintf( AI1WM_ERROR_NAME, ai1wm_basename( $nonce ) );
+	return AI1WM_STORAGE_PATH . DIRECTORY_SEPARATOR . sprintf( AI1WM_ERROR_NAME, $nonce );
 }
 
 /**
@@ -2027,6 +2039,36 @@ function ai1wm_setup_environment() {
 function ai1wm_setup_errors() {
 	@set_error_handler( 'Ai1wm_Handler::error' );
 	@register_shutdown_function( 'Ai1wm_Handler::shutdown' );
+}
+
+/**
+ * Send the response and close the connection, leaving PHP running
+ *
+ * Only the loopback steps of an export or import have nobody waiting on the
+ * response, and those are the requests that otherwise hold a connection open
+ * for the whole step. A manual run is driven by the browser, which reads the
+ * response, and the REST and WP-CLI entry points are not ajax requests.
+ *
+ * Supported by PHP-FPM and LiteSpeed. Anywhere else the connection stays open
+ * until the script ends, as it does now.
+ *
+ * @param  array<string, mixed> $params Request parameters
+ * @return void
+ */
+function ai1wm_close_connection( $params ) {
+	if ( ! defined( 'DOING_AJAX' ) || ! DOING_AJAX ) {
+		return;
+	}
+
+	if ( isset( $params['ai1wm_manual_export'] ) || isset( $params['ai1wm_manual_import'] ) || isset( $params['ai1wm_manual_restore'] ) ) {
+		return;
+	}
+
+	if ( function_exists( 'fastcgi_finish_request' ) ) {
+		fastcgi_finish_request();
+	} elseif ( function_exists( 'litespeed_finish_request' ) ) {
+		litespeed_finish_request();
+	}
 }
 
 /**

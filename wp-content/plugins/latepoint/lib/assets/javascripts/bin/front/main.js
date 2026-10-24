@@ -130,7 +130,7 @@ function latepoint_init_manage_booking_by_key() {
 }
 
 function latepoint_init_form_masks() {
-    if (('lp_intlTelInput' in window) && ('lp_intlTelInputGlobals' in window)) {
+    if ('lp_intlTelInput' in window) {
         jQuery('.os-mask-phone').each(function () {
             latepoint_mask_phone(jQuery(this));
         });
@@ -661,7 +661,6 @@ function latepoint_init_timeslots($booking_form_element = false) {
 }
 
 async function latepoint_monthly_calendar_load_next_month($booking_form_element) {
-    if (!$booking_form_element || !$booking_form_element.length) return false;
     try {
 
         if ($booking_form_element.find('.os-monthly-calendar-days-w.active + .os-monthly-calendar-days-w').length) {
@@ -672,23 +671,17 @@ async function latepoint_monthly_calendar_load_next_month($booking_form_element)
         } else {
             let $btn = $booking_form_element.find('.os-month-next-btn');
             let next_month_route_name = $btn.data('route');
-            let $calendar_element = $booking_form_element.find('.os-monthly-calendar-days-w').last();
-            let calendar_year = Number($calendar_element.attr('data-calendar-year'));
-            let calendar_month = Number($calendar_element.attr('data-calendar-month'));
-            let $booking_form = $booking_form_element.find('.latepoint-form').first();
-            if (!$calendar_element.length || !$booking_form.length || !next_month_route_name || !Number.isInteger(calendar_year) || !Number.isInteger(calendar_month) || calendar_month < 1 || calendar_month > 12) {
-                return false;
-            }
-            if ($booking_form_element.data('calendar-month-loading')) return false;
-            $booking_form_element.data('calendar-month-loading', true);
             $btn.addClass('os-loading');
+            let $calendar_element = $booking_form_element.find('.os-monthly-calendar-days-w').last();
+            let calendar_year = $calendar_element.data('calendar-year');
+            let calendar_month = $calendar_element.data('calendar-month');
             if (calendar_month == 12) {
                 calendar_year = calendar_year + 1;
                 calendar_month = 1;
             } else {
                 calendar_month = calendar_month + 1;
             }
-            let form_data = new FormData($booking_form[0]);
+            let form_data = new FormData($booking_form_element.find('.latepoint-form')[0]);
             form_data.set('target_date_string', `${calendar_year}-${calendar_month}-1`);
             let params = latepoint_formdata_to_url_encoded_string(form_data);
             let data = {
@@ -698,20 +691,15 @@ async function latepoint_monthly_calendar_load_next_month($booking_form_element)
                 layout: 'none',
                 return_format: 'json'
             }
-            let response;
-            try {
-                response = await jQuery.ajax({
-                    type: "post",
-                    dataType: "json",
-                    url: latepoint_timestamped_ajaxurl(),
-                    data: data,
-                    success: function (data) {
-                    }
-                });
-            } finally {
-                $booking_form_element.removeData('calendar-month-loading');
-                $btn.removeClass('os-loading');
-            }
+            let response = await jQuery.ajax({
+                type: "post",
+                dataType: "json",
+                url: latepoint_timestamped_ajaxurl(),
+                data: data,
+                success: function (data) {
+                }
+            });
+            $btn.removeClass('os-loading');
             if (response.status === "success") {
                 $booking_form_element.find('.os-months').append(response.message);
                 $booking_form_element.find('.os-monthly-calendar-days-w.active').removeClass('active').next('.os-monthly-calendar-days-w').addClass('active');
@@ -725,8 +713,6 @@ async function latepoint_monthly_calendar_load_next_month($booking_form_element)
 
         }
     } catch (e) {
-        $booking_form_element.removeData('calendar-month-loading');
-        $booking_form_element.find('.os-month-next-btn').removeClass('os-loading');
         console.log(e);
         alert('Error:' + e);
         return false;
@@ -736,7 +722,6 @@ async function latepoint_monthly_calendar_load_next_month($booking_form_element)
 function latepoint_init_monthly_calendar_navigation($booking_form_element = false) {
     if (!$booking_form_element) return;
     $booking_form_element.find('.os-month-next-btn').on('click', async function () {
-        if (jQuery(this).hasClass('os-loading')) return false;
         let $booking_form_element = jQuery(this).closest('.latepoint-booking-form-element');
         let result = await latepoint_monthly_calendar_load_next_month($booking_form_element);
         latepoint_datepicker_toggle_no_availability_message($booking_form_element);
@@ -884,8 +869,7 @@ async function latepoint_init_step_datepicker($booking_form_element = false) {
                 if ($first_available.length) {
                     break;
                 } else {
-                    let month_loaded = await latepoint_monthly_calendar_load_next_month($booking_form_element);
-                    if (!month_loaded) break;
+                    await latepoint_monthly_calendar_load_next_month($booking_form_element);
                 }
             }
         }
@@ -1435,10 +1419,10 @@ async function latepoint_resend_customer_otp_code($booking_form_element, $resend
     let form_data = new FormData($booking_form_element.find('.latepoint-form')[0]);
 
         // get values from phone number fields
-      if (('lp_intlTelInputGlobals' in window) && ('lp_intlTelInputUtils' in window)) {
+      if (latepoint_iti_is_ready()) {
         $booking_form_element.find('input.os-mask-phone').each(function () {
           const phoneInputName = this.getAttribute('name');
-          const phoneInputValue = window.lp_intlTelInputGlobals.getInstance(this).getNumber(window.lp_intlTelInputUtils.numberFormat.E164);
+          const phoneInputValue = latepoint_iti_get_e164(this);
           // override value generated automatically by formdata with a formatted value of a phone field with country code
           form_data.set(phoneInputName, phoneInputValue);
         });
@@ -1481,10 +1465,10 @@ async function latepoint_request_customer_otp_code($booking_form_element, $reque
 
 
         // get values from phone number fields
-      if (('lp_intlTelInputGlobals' in window) && ('lp_intlTelInputUtils' in window)) {
+      if (latepoint_iti_is_ready()) {
         $booking_form_element.find('input.os-mask-phone').each(function () {
           const phoneInputName = this.getAttribute('name');
-          const phoneInputValue = window.lp_intlTelInputGlobals.getInstance(this).getNumber(window.lp_intlTelInputUtils.numberFormat.E164);
+          const phoneInputValue = latepoint_iti_get_e164(this);
           // override value generated automatically by formdata with a formatted value of a phone field with country code
           form_data.set(phoneInputName, phoneInputValue);
         });
@@ -1554,10 +1538,10 @@ async function latepoint_login_customer($booking_form_element, $request_otp_butt
     let form_data = new FormData($form[0]);
 
         // get values from phone number fields
-      if (('lp_intlTelInputGlobals' in window) && ('lp_intlTelInputUtils' in window)) {
+      if (latepoint_iti_is_ready()) {
         $form.find('input.os-mask-phone').each(function () {
           const phoneInputName = this.getAttribute('name');
-          const phoneInputValue = window.lp_intlTelInputGlobals.getInstance(this).getNumber(window.lp_intlTelInputUtils.numberFormat.E164);
+          const phoneInputValue = latepoint_iti_get_e164(this);
           // override value generated automatically by formdata with a formatted value of a phone field with country code
           form_data.set(phoneInputName, phoneInputValue);
         });
@@ -2184,7 +2168,12 @@ function latepoint_init_booking_form($booking_form_element) {
             $booking_form_element.removeClass('step-content-loading').addClass('step-content-mid-loading');
 
 
-            if (new_parent_code_name == 'booking' && current_parent_code_name != 'booking' && active_cart_item_id) {
+            // The event info/tickets steps share the "booking__" prefix by naming convention only —
+            // they're a ticket-quantity selection, not a slot/service selection, so going back into
+            // them should never discard the cart item the way returning to services/datepicker does.
+            let is_event_step = new_current_step_code === 'booking__event' || new_current_step_code === 'booking__event_tickets';
+
+            if (new_parent_code_name == 'booking' && current_parent_code_name != 'booking' && active_cart_item_id && !is_event_step) {
 
                 // we are going back to one of the steps of a booking process, we need to remove the item that was just added to the cart and start over
                 $booking_form_element.find('.latepoint-summary-w').addClass('os-loading');
