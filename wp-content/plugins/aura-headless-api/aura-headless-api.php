@@ -553,6 +553,7 @@ final class Aura_Headless_API {
 		$booking->service_id = $service_id;
 		$booking->duration   = $duration;
 		$total               = (float) OsBookingHelper::calculate_full_amount_for_booking( $booking );
+		$deposit_amount      = (float) ceil( ( $total * 0.5 ) / 10 ) * 10;
 		$payment_methods = self::get_available_payment_methods();
 
 		$response = rest_ensure_response(
@@ -565,6 +566,10 @@ final class Aura_Headless_API {
 				'total' => array(
 					'amount'    => $total,
 					'formatted' => OsMoneyHelper::format_price( $total ),
+				),
+				'deposit' => array(
+					'amount'    => $deposit_amount,
+					'formatted' => OsMoneyHelper::format_price( $deposit_amount ),
 				),
 				'paymentMethods' => $payment_methods,
 			)
@@ -916,7 +921,8 @@ final class Aura_Headless_API {
 
 		$cart                    = new OsCartModel();
 		$cart->payment_time      = $is_pay_later ? LATEPOINT_PAYMENT_TIME_LATER : LATEPOINT_PAYMENT_TIME_NOW;
-		$cart->payment_portion   = LATEPOINT_PAYMENT_PORTION_FULL;
+		$is_deposit            = isset( $payload['paymentPortion'] ) && 'deposit' === $payload['paymentPortion'];
+		$cart->payment_portion   = $is_deposit ? LATEPOINT_PAYMENT_PORTION_DEPOSIT : LATEPOINT_PAYMENT_PORTION_FULL;
 		$cart->payment_method    = $is_pay_later ? LATEPOINT_PAYMENT_METHOD_LOCAL : 'woocommerce';
 		$cart->payment_processor = $is_pay_later ? 'latepoint' : 'woocommerce';
 		foreach ( $booking_contexts as $context ) {
@@ -1394,6 +1400,10 @@ final class Aura_Headless_API {
 				'id'               => (int) $bundle->id,
 				'name'             => (string) $bundle->name,
 				'includedServices' => $included_services,
+				'deposit'          => array(
+					'amount'    => (float) ceil( ( (float) $bundle->full_amount_to_charge() * 0.5 ) / 10 ) * 10,
+					'formatted' => OsMoneyHelper::format_price( (float) ceil( ( (float) $bundle->full_amount_to_charge() * 0.5 ) / 10 ) * 10 ),
+				),
 			);
 		}
 
@@ -1615,7 +1625,8 @@ final class Aura_Headless_API {
 			},
 			$bundle->get_services()
 		);
-		$amount = (float) $bundle->full_amount_to_charge();
+		$amount         = (float) $bundle->full_amount_to_charge();
+		$deposit_amount = (float) ceil( ( $amount * 0.5 ) / 10 ) * 10;
 
 		return array(
 			'id'               => (int) $bundle->id,
@@ -1624,6 +1635,10 @@ final class Aura_Headless_API {
 			'price'            => array(
 				'amount'    => $amount,
 				'formatted' => OsMoneyHelper::format_price( $amount ),
+			),
+			'deposit'          => array(
+				'amount'    => $deposit_amount,
+				'formatted' => OsMoneyHelper::format_price( $deposit_amount ),
 			),
 			'includedServices' => $included_services,
 		);
