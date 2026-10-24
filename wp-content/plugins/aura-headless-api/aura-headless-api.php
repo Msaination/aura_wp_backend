@@ -1381,6 +1381,7 @@ final class Aura_Headless_API {
 			$included_services = array_map(
 				static function ( $service ) {
 					return array(
+						'id'              => (int) $service->id,
 						'name'            => (string) $service->name,
 						'quantity'        => (int) ( $service->join_attributes['quantity'] ?? 1 ),
 						'durationMinutes' => (int) ( $service->join_attributes['duration'] ?? $service->duration ),
