@@ -825,7 +825,7 @@ final class Aura_Headless_API {
 				);
 			}
 
-			$bundle = new OsBundleModel( absint( $bundle_payload['bundleId'] ?? 0 ) );
+			$bundle = new OsBundleModel( absint( $bundle_payload['bundleId'] ?? $bundle_payload['packageId'] ?? 0 ) );
 			if ( ! $bundle->exists() || ! $bundle->is_active() || $bundle->is_hidden() || empty( $bundle->get_services() ) ) {
 				return new WP_Error(
 					'aura_bundle_not_found',
