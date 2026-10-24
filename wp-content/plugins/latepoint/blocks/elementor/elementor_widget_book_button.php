@@ -145,7 +145,7 @@ class Latepoint_Elementor_Widget_Book_Button extends \Elementor\Widget_Base {
 		$this->add_control(
 			'selected_bundle',
 			[
-				'label' => esc_html__('Preselected Bundle', 'latepoint'),
+				'label' => esc_html__('Preselected Package', 'latepoint'),
 				'type' => \Elementor\Controls_Manager::SELECT,
 				'default' => '',
 				'options' => $this->widget_data['selected_bundles_options'],

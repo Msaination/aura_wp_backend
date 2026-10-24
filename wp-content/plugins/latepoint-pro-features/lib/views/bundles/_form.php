@@ -14,14 +14,14 @@
 				<div class="os-form-sub-header">
 					<h3><?php _e('General Information', 'latepoint-pro-features'); ?></h3>
 					<?php if (!$bundle->is_new_record()) { ?>
-						<div class="os-form-sub-header-actions"><?php echo __('Bundle ID:', 'latepoint-pro-features') . $bundle->id; ?></div>
+						<div class="os-form-sub-header-actions"><?php echo __('Package ID:', 'latepoint-pro-features') . $bundle->id; ?></div>
 					<?php } ?>
 				</div>
 			</div>
 			<div class="white-box-content">
 				<div class="os-row">
 					<div class="os-col-lg-6">
-						<?php echo OsFormHelper::text_field('bundle[name]', __('Bundle Name', 'latepoint-pro-features'), $bundle->name, ['theme' => 'simple']); ?>
+						<?php echo OsFormHelper::text_field('bundle[name]', __('Package Name', 'latepoint-pro-features'), $bundle->name, ['theme' => 'simple']); ?>
 					</div>
 					<div class="os-col-lg-3">
 						<?php echo OsFormHelper::select_field('bundle[visibility]', __('Visibility', 'latepoint-pro-features'), array(LATEPOINT_BUNDLE_VISIBILITY_VISIBLE => __('Visible to everyone', 'latepoint-pro-features'), LATEPOINT_BUNDLE_VISIBILITY_HIDDEN => __('Visible only to admins and agents', 'latepoint-pro-features')), $bundle->visibility); ?>
@@ -127,7 +127,7 @@
 									echo OsFormHelper::hidden_field('bundle[services][service_' . $service->id . '][total_attendees]', 1);
 								}?>
 								<div class="complex-connection-set">
-									<label for=""><?php _e('Bundle Quantity:', 'latepoint-pro-features'); ?></label>
+									<label for=""><?php _e('Package Quantity:', 'latepoint-pro-features'); ?></label>
 									<div class="os-connection-quantity-wrapper">
 										<?php echo OsFormHelper::quantity_field('bundle[services][service_' . $service->id . '][quantity]', __('qty', 'latepoint-pro-features'), ($is_connected_value ? $bundle->quantity_for_service($service->id) : 0)); ?>
 									</div>
@@ -153,7 +153,7 @@
 			if ($bundle->is_new_record()) {
 				echo OsFormHelper::hidden_field('bundle[id]', '');
 				wp_nonce_field('latepoint_new_bundle', '_wpnonce', false);
-				echo OsFormHelper::button('submit', __('Save Bundle', 'latepoint-pro-features'), 'submit', ['class' => 'latepoint-btn']);
+				echo OsFormHelper::button('submit', __('Save Package', 'latepoint-pro-features'), 'submit', ['class' => 'latepoint-btn']);
 			} else {
 				echo OsFormHelper::hidden_field('bundle[id]', $bundle->id);
 				wp_nonce_field('latepoint_edit_bundle_' . $bundle->id, '_wpnonce', false);
@@ -166,7 +166,7 @@
                 data-os-action="' . OsRouterHelper::build_route_name('bundles', 'destroy') . '">' . __('Delete Package', 'latepoint-pro-features') . '</a>';
 				}
 				if (OsRolesHelper::can_user('bundle__edit')) {
-					echo OsFormHelper::button('submit', __('Save Bundle', 'latepoint-pro-features'), 'submit', ['class' => 'latepoint-btn']);
+					echo OsFormHelper::button('submit', __('Save Package', 'latepoint-pro-features'), 'submit', ['class' => 'latepoint-btn']);
 				}
 			}
 

@@ -124,7 +124,7 @@ class Latepoint_Elementor_Widget_List_Of_Resources extends \Elementor\Widget_Bas
 					'services' => esc_html__('Services', 'latepoint'),
 					'agents' => esc_html__('Agents', 'latepoint'),
 					'locations' => esc_html__('Locations', 'latepoint'),
-					'bundles' => esc_html__('Bundles', 'latepoint'),
+					'bundles' => esc_html__('Packages', 'latepoint'),
 				]
 			]
 		);
@@ -210,7 +210,7 @@ class Latepoint_Elementor_Widget_List_Of_Resources extends \Elementor\Widget_Bas
 		$this->add_control(
 			'selected_bundle',
 			[
-				'label' => esc_html__('Preselected Bundle', 'latepoint'),
+				'label' => esc_html__('Preselected Package', 'latepoint'),
 				'type' => \Elementor\Controls_Manager::SELECT,
 				'default' => '',
 				'options' => $this->widget_data['selected_bundles_options'],
@@ -386,7 +386,7 @@ class Latepoint_Elementor_Widget_List_Of_Resources extends \Elementor\Widget_Bas
 		$this->add_control(
 			'item_ids_bundles',
 			[
-				'label' => esc_html__('Show Selected Bundles', 'latepoint'),
+				'label' => esc_html__('Show Selected Packages', 'latepoint'),
 				'type' => \Elementor\Controls_Manager::SELECT2,
 				'default' => '',
 				'options' => $this->widget_data['bundles'],

@@ -155,7 +155,7 @@ class OsFeatureServiceDisplayModeHelper {
 				'options' => [
 					''              => esc_html__( 'Show All Services', 'latepoint-pro-features' ),
 					'services_only' => esc_html__( 'Show Only Individual Services', 'latepoint-pro-features' ),
-					'bundles_only'  => esc_html__( 'Show Only Bundled Services', 'latepoint-pro-features' ),
+					'bundles_only'  => esc_html__( 'Show Only Packages', 'latepoint-pro-features' ),
 				],
 			]
 		);

@@ -112,10 +112,10 @@ class Latepoint_Bricks_Widget_Book_Button extends \Bricks\Element {
 		$this->controls['selected_bundle'] = [
 			'tab'         => 'content',
 			'group'       => 'step_settings',
-			'label'       => esc_html__( 'Preselected Bundle', 'latepoint' ),
+			'label'       => esc_html__( 'Preselected Package', 'latepoint' ),
 			'type'        => 'select',
 			'options'     => OsBricksHelper::get_data('selected_bundles'),
-			'placeholder' => esc_html__( 'Preselected Bundle', 'latepoint' ),
+			'placeholder' => esc_html__( 'Preselected Package', 'latepoint' ),
 			'searchable'  => true,
 			'clearable'   => true,
 		];

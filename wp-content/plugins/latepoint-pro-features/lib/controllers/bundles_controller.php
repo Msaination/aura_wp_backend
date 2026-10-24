@@ -57,9 +57,9 @@ if ( ! class_exists( 'OsBundlesController' ) ) :
 		*/
 
 		public function new_form() {
-			$this->vars['page_header']   = __( 'New Bundle', 'latepoint-pro-features' );
+			$this->vars['page_header']   = __( 'New Package', 'latepoint-pro-features' );
 			$this->vars['breadcrumbs'][] = array(
-				'label' => __( 'New Bundle', 'latepoint-pro-features' ),
+				'label' => __( 'New Package', 'latepoint-pro-features' ),
 				'link'  => false,
 			);
 
@@ -121,7 +121,7 @@ if ( ! class_exists( 'OsBundlesController' ) ) :
 
 			if ( $bundle->save() && $bundle->save_services( $this->params['bundle']['services'] ) ) {
 				if ( $is_new_record ) {
-					$response_html = __( 'Bundle Created. ID:', 'latepoint-pro-features' ) . $bundle->id;
+					$response_html = __( 'Package Created. ID:', 'latepoint-pro-features' ) . $bundle->id;
 					OsActivitiesHelper::create_activity(
 						array(
 							'code'      => 'bundle_create',
@@ -129,7 +129,7 @@ if ( ! class_exists( 'OsBundlesController' ) ) :
 						) 
 					);
 				} else {
-					$response_html = __( 'Bundle Updated. ID:', 'latepoint-pro-features' ) . $bundle->id;
+					$response_html = __( 'Package Updated. ID:', 'latepoint-pro-features' ) . $bundle->id;
 					OsActivitiesHelper::create_activity(
 						array(
 							'code'      => 'bundle_update',
@@ -168,14 +168,14 @@ if ( ! class_exists( 'OsBundlesController' ) ) :
 				$bundle = new OsBundleModel( $this->params['id'] );
 				if ( $bundle->delete() ) {
 					  $status        = LATEPOINT_STATUS_SUCCESS;
-					  $response_html = __( 'Bundle Removed', 'latepoint-pro-features' );
+					  $response_html = __( 'Package Removed', 'latepoint-pro-features' );
 				} else {
 					$status        = LATEPOINT_STATUS_ERROR;
-					$response_html = __( 'Error Removing Bundle', 'latepoint-pro-features' );
+					$response_html = __( 'Error Removing Package', 'latepoint-pro-features' );
 				}
 			} else {
 				$status        = LATEPOINT_STATUS_ERROR;
-				$response_html = __( 'Error Removing Bundle', 'latepoint-pro-features' );
+				$response_html = __( 'Error Removing Package', 'latepoint-pro-features' );
 			}
 
 			if ( $this->get_return_format() == 'json' ) {

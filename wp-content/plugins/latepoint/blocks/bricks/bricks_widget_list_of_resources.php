@@ -94,7 +94,7 @@ class Latepoint_Bricks_Widget_List_Of_Resources extends \Bricks\Element {
 				'services'  => esc_html__( 'Services', 'latepoint' ),
 				'agents'    => esc_html__( 'Agents', 'latepoint' ),
 				'locations' => esc_html__( 'Locations', 'latepoint' ),
-				'bundles'   => esc_html__( 'Bundles', 'latepoint' ),
+				'bundles'   => esc_html__( 'Packages', 'latepoint' ),
 			],
 			'default' => 'services'
 		];
@@ -159,10 +159,10 @@ class Latepoint_Bricks_Widget_List_Of_Resources extends \Bricks\Element {
 		$this->controls['selected_bundle'] = [
 			'tab'         => 'content',
 			'group'       => 'step_settings',
-			'label'       => esc_html__( 'Preselected Bundle', 'latepoint' ),
+			'label'       => esc_html__( 'Preselected Package', 'latepoint' ),
 			'type'        => 'select',
 			'options'     => OsBricksHelper::get_data('selected_bundles'),
-			'placeholder' => esc_html__( 'Preselected Bundle', 'latepoint' ),
+			'placeholder' => esc_html__( 'Preselected Package', 'latepoint' ),
 			'searchable'  => true,
 			'clearable'   => true,
 			'required'   => array( 'items', '!=', ['services', 'bundles'] ),
@@ -307,10 +307,10 @@ class Latepoint_Bricks_Widget_List_Of_Resources extends \Bricks\Element {
 		$this->controls['item_ids_bundles'] = [
 			'tab'        => 'content',
 			'group'      => 'items_settings',
-			'label'      => esc_html__( 'Show Selected Bundles', 'latepoint' ),
+			'label'      => esc_html__( 'Show Selected Packages', 'latepoint' ),
 			'type'       => 'select',
 			'options'    => OsBricksHelper::get_data( 'bundles' ),
-			'placeholder' => esc_html__( 'Show Selected Bundles', 'latepoint' ),
+			'placeholder' => esc_html__( 'Show Selected Packages', 'latepoint' ),
 			'multiple'   => true,
 			'searchable' => true,
 			'clearable'  => true,

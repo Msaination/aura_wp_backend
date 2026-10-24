@@ -68,7 +68,7 @@ class OsBundlesHelper {
 		$booked_count = 0;
 
 		// translators: %s is the name of the bundle
-		$html .= '<div class="hidden-bundle-items-notice"><div class="hidden-bundle-items-notice-message">' . sprintf( __( 'Part of a %s bundle.', 'latepoint' ), '<strong>"' . $bundle->name . '"</strong>' ) . '</div><div class="hidden-bundle-items-notice-link">' . __( 'Show Full Bundle', 'latepoint' ) . '</div></div>';
+		$html .= '<div class="hidden-bundle-items-notice"><div class="hidden-bundle-items-notice-message">' . sprintf( __( 'Part of a %s package.', 'latepoint' ), '<strong>"' . $bundle->name . '"</strong>' ) . '</div><div class="hidden-bundle-items-notice-link">' . __( 'Show Full Package', 'latepoint' ) . '</div></div>';
 		$html .= '<div class="bookable-items-breakdown">';
 		foreach ( $bundle_services as $service ) {
 			$bookings = ( strpos( $order_item_id, 'new_' ) === false ) ? OsOrdersHelper::get_bookings_for_order_item( $order_item_id, $service->id, OsBookingHelper::get_non_cancelled_booking_statuses() ) : [];

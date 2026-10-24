@@ -380,7 +380,7 @@ class OsRolesHelper {
 			'activity'           => __( 'Activity Logs', 'latepoint' ),
 			'agent'              => __( 'Agents', 'latepoint' ),
 			'service'            => __( 'Services', 'latepoint' ),
-			'bundle'             => __( 'Bundle', 'latepoint' ),
+			'bundle'	     => __( 'Package', 'latepoint' ),
 			'location'           => __( 'Locations', 'latepoint' ),
 			'service_extra'      => __( 'Service Extras', 'latepoint' ),
 			'asset'              => __( 'Assets', 'latepoint' ),

@@ -766,11 +766,11 @@ class OsBookingHelper {
 						<div class="os-item-category-info os-item-i" tabindex="0">
 							<div class="os-item-img-w"><i class="latepoint-icon latepoint-icon-shopping-bag"></i></div>
 							<div class="os-item-name-w">
-								<div class="os-item-name"><?php echo esc_html__( 'Bundle & Save', 'latepoint' ); ?></div>
+								<div class="os-item-name"><?php echo esc_html__( 'Package & Save', 'latepoint' ); ?></div>
 							</div>
 							<?php if ( OsSettingsHelper::is_on( 'show_service_categories_count' ) && count( $bundles ) ) { ?>
 								<div class="os-item-child-count">
-									<span><?php echo count( $bundles ); ?></span> <?php esc_html_e( 'Bundles', 'latepoint' ); ?>
+									<span><?php echo count( $bundles ); ?></span> <?php esc_html_e( 'Packages', 'latepoint' ); ?>
 								</div>
 							<?php } ?>
 						</div>

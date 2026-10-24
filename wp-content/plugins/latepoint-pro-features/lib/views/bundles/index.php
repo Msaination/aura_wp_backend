@@ -34,7 +34,7 @@
 						  <div class="os-bundle-foot">
 						    <a href="<?php echo OsRouterHelper::build_link(OsRouterHelper::build_route_name('bundles', 'edit'), array('id' => $bundle->id) ) ?>" class="latepoint-btn latepoint-btn-block latepoint-btn-secondary">
 						      <i class="latepoint-icon latepoint-icon-edit-3"></i>
-						      <span><?php _e('Edit Bundle', 'latepoint-pro-features'); ?></span>
+						      <span><?php _e('Edit Package', 'latepoint-pro-features'); ?></span>
 						    </a>
 						  </div>
 						</div>
@@ -51,7 +51,7 @@
 <?php }else{ ?>
   <div class="no-results-w">
     <div class="icon-w"><i class="latepoint-icon latepoint-icon-book"></i></div>
-    <h2><?php _e('No Bundles Found', 'latepoint-pro-features'); ?></h2>
+    <h2><?php _e('No Packages Found', 'latepoint-pro-features'); ?></h2>
     <a href="<?php echo OsRouterHelper::build_link(OsRouterHelper::build_route_name('bundles', 'new_form') ) ?>" class="latepoint-btn">
       <i class="latepoint-icon latepoint-icon-plus-square"></i>
       <span><?php _e('New Package', 'latepoint-pro-features'); ?></span>

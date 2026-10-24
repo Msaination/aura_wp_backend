@@ -725,7 +725,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                                                 <span class="var-code os-click-to-copy">{{agent_ids}}</span>
                                             </li>
                                             <li>
-                                                <span class="var-label"><?php esc_html_e( 'Bundle IDs#:', 'latepoint' ); ?></span>
+                                                <span class="var-label"><?php esc_html_e( 'Package IDs#:', 'latepoint' ); ?></span>
                                                 <span class="var-code os-click-to-copy">{{bundle_ids}}</span>
                                             </li>
                                             <li>

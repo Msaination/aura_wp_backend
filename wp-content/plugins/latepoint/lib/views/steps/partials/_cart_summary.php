@@ -43,7 +43,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 				?>
                 <div class="summary-heading summary-variant-heading">
                     <div class="pb-heading">
-                        <div class="pbh-label"><?php esc_html_e( 'Service Bundles', 'latepoint' ); ?></div>
+                        <div class="pbh-label"><?php esc_html_e( 'Service Packages', 'latepoint' ); ?></div>
                         <div class="pbh-line"></div>
                     </div>
                 </div>

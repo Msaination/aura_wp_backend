@@ -310,7 +310,7 @@ class OsCartModel extends OsModel {
 					// recalculations are below this point
 					$bundle                    = $item->build_original_object_from_item_data();
 					$service_row               = [
-						'heading' => __( 'Bundle', 'latepoint' ),
+						'heading' => __( 'Package', 'latepoint' ),
 						'items'   => [],
 					];
 					$item_subtotal             = OsBundlesHelper::calculate_full_amount_for_bundle( $bundle );

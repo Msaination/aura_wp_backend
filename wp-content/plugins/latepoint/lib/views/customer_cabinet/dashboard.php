@@ -53,11 +53,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<?php
 				if($not_scheduled_bundles){ ?>
 				<div class="latepoint-section-heading-w">
-					<h5 class="latepoint-section-heading"><?php esc_html_e('Bundles', 'latepoint'); ?></h5>
+					<h5 class="latepoint-section-heading"><?php esc_html_e('Packages', 'latepoint'); ?></h5>
 					<div class="heading-extra">
                         <?php
                         // translators: %d is number of bundles
-                        echo sprintf( esc_html__('%d Bundles', 'latepoint'), count($not_scheduled_bundles)); ?>
+                        echo sprintf( esc_html__('%d Packages', 'latepoint'), count($not_scheduled_bundles)); ?>
                     </div>
 				</div>
 				<div class="customer-bookings-tiles">

@@ -143,7 +143,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 							<?php if ( ! empty( $bundles ) ) { ?>
                                 <div class="new-order-item-variant new-order-item-variant-bundle">
                                     <i class="latepoint-icon latepoint-icon-layers"></i>
-                                    <div><?php esc_html_e( 'Bundle', 'latepoint' ); ?></div>
+                                    <div><?php esc_html_e( 'Package', 'latepoint' ); ?></div>
                                 </div>
 							<?php } ?>
 							<?php
